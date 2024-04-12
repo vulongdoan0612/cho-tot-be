@@ -14,15 +14,19 @@ userRouter.post("/register", async (req, res) => {
   try {
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
-      return res
-        .status(201)
-        .json({ message: "Số điện thoại tài khoản đã tồn tại." });
+      return res.status(201).json({
+        message: "Số điện thoại tài khoản đã tồn tại.",
+        status: "UNSUCCESS",
+      });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ fullname, password: hashedPassword, phone });
     await user.save();
 
-    res.status(201).json({ message: "Tài khoản được đăng ký thành công." });
+    res.status(201).json({
+      message: "Tài khoản được đăng ký thành công.",
+      status: "SUCCESS",
+    });
   } catch (error) {
     res.status(500).json({ error: "Xin vui lòng hãy thử lại sau." });
   }
@@ -32,14 +36,21 @@ userRouter.post("/login", async (req, res) => {
   try {
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "Tài khoản không tìm thấy." });
+      return res
+        .status(200)
+        .json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (isPasswordValid) {
       const token = jwt.sign({ id: user._id }, "VinalinkGroup!2020");
-      res.status(200).json({ token });
+      res
+        .status(200)
+        .json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
     } else {
-      res.status(401).json({ message: "Sai mật khẩu hoặc số điện thoại." });
+      res.status(200).json({
+        message: "Sai mật khẩu hoặc số điện thoại.",
+        status: "UNSUCCESS",
+      });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -47,8 +58,16 @@ userRouter.post("/login", async (req, res) => {
 });
 
 userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
-  const { address, introduction, identifyCard, favouriteList, sex, birthdate } =
-    req.body;
+  const {
+    address,
+    introduction,
+    identifyCard,
+    favouriteList,
+    rememberName,
+    faxNumber,
+    sex,
+    birthdate,
+  } = req.body;
 
   try {
     const userId = req.user.id;
@@ -56,7 +75,9 @@ userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
     const updates = {
       address,
       introduction,
+      rememberName,
       identifyCard,
+      faxNumber,
       favouriteList,
       sex,
       birthdate,
@@ -87,7 +108,7 @@ userRouter.put("/change-password", checkAccessToken, async (req, res) => {
       user.password
     );
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Mật khẩu hiện tại không đúng." });
+      return res.status(200).json({ message: "Mật khẩu hiện tại không đúng." });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
@@ -95,7 +116,10 @@ userRouter.put("/change-password", checkAccessToken, async (req, res) => {
     user.password = hashedNewPassword;
     await user.save();
 
-    res.status(200).json({ message: "Mật khẩu đã được thay đổi thành công." });
+    res.status(200).json({
+      message: "Mật khẩu đã được thay đổi thành công.",
+      success: true,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
@@ -106,7 +130,6 @@ userRouter.get("/get-profile", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const user = await User.findById(userId).select("-password");
-    console.log(user);
     res.status(200).json({ user: user });
   } catch (error) {
     console.log(error);

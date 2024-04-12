@@ -12,13 +12,19 @@ const userSchema = new mongoose.Schema({
     detailAddress: {
       type: String,
     },
+    fullAddress: {
+      type: String,
+    },
   },
+  rememberName: { type: String },
   introduction: { type: String },
-  indentifyCard: {
+  identifyCard: {
     CMND: { type: String },
     date: { type: String },
     location: { type: String },
+    fullCMND: { type: String },
   },
+  faxNumber: { type: String },
   favouriteList: { type: Array, default: undefined },
   sex: { type: String },
   birthdate: { type: String },

@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import userRouter from "./routes/userRoutes.js";
+import formPostRouter from "./routes/formPostRoutes.js";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ const corsOptions = {
   allowedHeaders: ["Content-type"],
 };
 app.use("/", userRouter);
+app.use("/", formPostRouter);
 
 const port = 5000;
 
