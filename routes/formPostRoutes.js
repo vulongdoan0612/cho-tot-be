@@ -14,6 +14,8 @@ import multer from "multer";
 
 import FormPostCheck from "../models/formPostCheckModel.js";
 import moment from "moment";
+import { v4 as uuidv4 } from "uuid";
+
 import config from "../config/firebase.js";
 initializeApp(config.firebaseConfig);
 const storage = getStorage();
@@ -58,15 +60,25 @@ formPostCheckRouter.post(
         detailAddress,
       } = req.body;
       if (req.files) {
+        const postIdRef = ref(storage, `images/post/${userId}/${postId}`);
+        const postIdSnapshot = await getDownloadURL(postIdRef).catch(
+          () => null
+        );
+
+        if (!postIdSnapshot) {
+          await uploadBytesResumable(postIdRef, new Uint8Array());
+        }
+        console.log(req.files);
         const snapshots = await Promise.all(
           req.files.map(async (file, index) => {
+            const id = uuidv4();
+
+            const newFilePath = `images/post/${userId}/${postId}/${id}`;
+            const storageRef = ref(storage, newFilePath);
             const metadata = {
               contentType: file.mimetype,
             };
-            const storageRef = ref(
-              storage,
-              `images/post/${userId}/${postId}_${index}`
-            );
+
             return await uploadBytesResumable(
               storageRef,
               file.buffer,
@@ -204,15 +216,11 @@ formPostCheckRouter.put(
           await uploadBytesResumable(postIdRef, new Uint8Array());
         }
 
-        const postIdFiles = await listAll(postIdRef);
-
-        const fileCount = postIdFiles.items.length;
-
         const snapshots2 = await Promise.all(
           req.files.map(async (file, index) => {
-            const fileName = `${fileCount + index}`;
-
-            const newFilePath = `images/post/${userId}/${postId}/${fileName}`;
+            const id = uuidv4();
+            console.log(id);
+            const newFilePath = `images/post/${userId}/${postId}/${id}`;
             const newFileRef = ref(storage, newFilePath);
 
             const metadata = {
@@ -229,14 +237,15 @@ formPostCheckRouter.put(
         const downloadURLs = await Promise.all(
           snapshots2.map((snapshot) => getDownloadURL(snapshot.ref))
         );
-        if (image && image.length > 0) {
-          if (image.length === 1) {
-            downloadURLs.push(image[0]);
-          } else {
-            image.forEach((url) => {
-              downloadURLs.push(url);
-            });
-          }
+        console.log(typeof image === "string", image);
+        if (typeof image === "string") {
+          // Nếu image là một chuỗi duy nhất
+          downloadURLs.push(image);
+        } else if (Array.isArray(image)) {
+          // Nếu image là một mảng
+          image.forEach((url) => {
+            downloadURLs.push(url);
+          });
         }
 
         const updatedFields = {
