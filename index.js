@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import userRouter from "./routes/userRoutes.js";
 import formPostRouter from "./routes/formPostRoutes.js";
+import adminRouter from "./routes/adminCMS.js";
+import { Server } from "http";
 
 dotenv.config();
 
@@ -29,6 +31,7 @@ const corsOptions = {
 };
 app.use("/", userRouter);
 app.use("/", formPostRouter);
+app.use("/", adminRouter);
 
 const port = 5000;
 

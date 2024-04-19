@@ -9,6 +9,7 @@ import {
   getDownloadURL,
   uploadBytesResumable,
   listAll,
+  deleteObject,
 } from "firebase/storage";
 import multer from "multer";
 
@@ -68,32 +69,33 @@ formPostCheckRouter.post(
         if (!postIdSnapshot) {
           await uploadBytesResumable(postIdRef, new Uint8Array());
         }
-        console.log(req.files);
-        const snapshots = await Promise.all(
+        const images = await Promise.all(
           req.files.map(async (file, index) => {
             const id = uuidv4();
-
             const newFilePath = `images/post/${userId}/${postId}/${id}`;
             const storageRef = ref(storage, newFilePath);
             const metadata = {
               contentType: file.mimetype,
             };
 
-            return await uploadBytesResumable(
+            // Tải lên tệp và nhận về snapshot của nó
+            const snapshot = await uploadBytesResumable(
               storageRef,
               file.buffer,
               metadata
             );
+
+            // Lấy URL tải xuống từ snapshot
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            // Trả về đối tượng chứa id và URL tải xuống
+            return { uuid: id, img: downloadURL };
           })
         );
-
-        const downloadURLs = await Promise.all(
-          snapshots.map((snapshot) => getDownloadURL(snapshot.ref))
-        );
-
         const formPost = new FormPostCheck({
           userId: userId,
           postId,
+          hidden: false,
           date: moment().format("DD-MM-YYYY"),
           post: {
             value,
@@ -121,9 +123,9 @@ formPostCheckRouter.post(
             introducing,
             detailAddress,
             slug: `mua-ban-oto-${districtValueName}-${cityValueName}`,
-            image: downloadURLs,
+            image: images,
           },
-          censorship: false,
+          censorship: null,
         });
 
         await formPost.save();
@@ -155,12 +157,98 @@ formPostCheckRouter.post(
   }
 );
 formPostCheckRouter.post(
-  "/get-post-check-list",
+  "/get-post-check-list-accept",
   checkAccessToken,
   async (req, res) => {
     try {
       const userId = req.user.id;
-      const postCheck = await FormPostCheck.find({ userId });
+      const postCheck = await FormPostCheck.find({
+        userId,
+        hidden: false,
+        censorship: true,
+      });
+      res.status(200).json({ data: postCheck, status: "SUCCESS" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+formPostCheckRouter.post(
+  "/get-post-check-list-censorship",
+  checkAccessToken,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const postCheck = await FormPostCheck.find({
+        userId,
+        hidden: false,
+        censorship: null,
+      });
+      res.status(200).json({ data: postCheck, status: "SUCCESS" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+formPostCheckRouter.post(
+  "/get-post-check-list-refuse",
+  checkAccessToken,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const postCheck = await FormPostCheck.find({
+        userId,
+        hidden: false,
+        censorship: false,
+      });
+      res.status(200).json({ data: postCheck, status: "SUCCESS" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+formPostCheckRouter.post(
+  "/get-post-hidden-list",
+  checkAccessToken,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const postCheck = await FormPostCheck.find({ userId, hidden: true });
+      res.status(200).json({ data: postCheck, status: "SUCCESS" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+formPostCheckRouter.post(
+  "/update-post-hidden",
+  checkAccessToken,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { postId } = req.body; // Lấy postId từ body của request
+
+      // Kiểm tra xem có bản ghi FormPostCheck nào có userId và postId khớp và hidden là false hay không
+      const postCheck = await FormPostCheck.findOneAndUpdate(
+        { userId: userId, postId: postId },
+        { hidden: false },
+        { new: true }
+      );
+
+      // Nếu không tìm thấy bản ghi hoặc không có sự khớp, trả về lỗi
+      if (!postCheck) {
+        return res.status(404).json({
+          message: "Không tìm thấy bài đăng hoặc không có quyền truy cập",
+          status: "ERROR",
+        });
+      }
+
+      // Nếu tìm thấy và cập nhật thành công, trả về dữ liệu cập nhật với mã trạng thái 200
       res.status(200).json({ data: postCheck, status: "SUCCESS" });
     } catch (error) {
       console.log(error);
@@ -216,35 +304,38 @@ formPostCheckRouter.put(
           await uploadBytesResumable(postIdRef, new Uint8Array());
         }
 
-        const snapshots2 = await Promise.all(
+        const images = await Promise.all(
           req.files.map(async (file, index) => {
             const id = uuidv4();
-            console.log(id);
             const newFilePath = `images/post/${userId}/${postId}/${id}`;
-            const newFileRef = ref(storage, newFilePath);
-
+            const storageRef = ref(storage, newFilePath);
             const metadata = {
               contentType: file.mimetype,
             };
-            return await uploadBytesResumable(
-              newFileRef,
+
+            const snapshot = await uploadBytesResumable(
+              storageRef,
               file.buffer,
               metadata
             );
+
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            return { uuid: id, img: downloadURL };
           })
         );
+        let imageObjects;
 
-        const downloadURLs = await Promise.all(
-          snapshots2.map((snapshot) => getDownloadURL(snapshot.ref))
-        );
-        console.log(typeof image === "string", image);
         if (typeof image === "string") {
-          // Nếu image là một chuỗi duy nhất
-          downloadURLs.push(image);
+          imageObjects = JSON.parse(image);
         } else if (Array.isArray(image)) {
-          // Nếu image là một mảng
-          image.forEach((url) => {
-            downloadURLs.push(url);
+          imageObjects = image.map((jsonString) => JSON.parse(jsonString));
+        }
+        if (!Array.isArray(imageObjects)) {
+          images.push(imageObjects);
+        } else {
+          imageObjects.forEach((img) => {
+            images.push(img);
           });
         }
 
@@ -274,20 +365,48 @@ formPostCheckRouter.put(
           introducing,
           detailAddress,
           slug: `mua-ban-oto-${districtValueName}-${cityValueName}`,
-          image: downloadURLs,
+          image: images,
         };
+
         const updatedPost = await FormPostCheck.findOneAndUpdate(
           { userId: userId, postId: postId },
           { post: updatedFields },
           { new: true }
         );
+        async function deleteNonUuidImages(userId, postId, images) {
+          const newFilePath = `images/post/${userId}/${postId}`;
+          const storageRef = ref(storage, newFilePath);
 
+          try {
+            const listResult = await listAll(storageRef);
+            const itemsToDelete = listResult.items.filter((item) => {
+              return !images.some((image) => image.uuid === item.name);
+            });
+            await Promise.all(
+              itemsToDelete.map(async (item) => {
+                try {
+                  await deleteObject(item);
+                  console.log(`Đã xóa hình ảnh ${item.name}`);
+                } catch (error) {
+                  console.error(`Lỗi khi xóa hình ảnh ${item.name}:`, error);
+                }
+              })
+            );
+
+            console.log(
+              "Đã xóa hình ảnh không được đặt tên là uuid thành công."
+            );
+          } catch (error) {
+            console.error("Lỗi khi xóa hình ảnh:", error);
+          }
+        }
         if (!updatedPost) {
           return res.status(404).json({
             message: "Không tìm thấy bài đăng",
             status: "ERROR",
           });
         }
+        deleteNonUuidImages(userId, postId, images);
 
         res.status(200).json({
           message: "Cập nhật bài đăng thành công",
@@ -300,5 +419,39 @@ formPostCheckRouter.put(
     }
   }
 );
+formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
+  try {
+    const { postId } = req.body;
+    const userId = req.user.id;
+    // Kiểm tra nếu postId không tồn tại
+    const existingPost = await FormPostCheck.findOne({ postId: postId });
+    if (!existingPost) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy bài đăng", status: "ERROR" });
+    }
+    if (existingPost.userId !== userId) {
+      return res.status(403).json({
+        message: "Bạn không có quyền chỉnh sửa bài đăng này",
+        status: "ERROR",
+      });
+    }
+    // Thêm trường hidden là true vào bản ghi và lưu lại
+    existingPost.hidden = true;
+    const updatedPost = await existingPost.save();
 
+    res.status(200).json({
+      message: "Đã thêm trường hidden là true cho bài đăng",
+      status: "SUCCESS",
+      updatedPost,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Đã xảy ra lỗi",
+      status: "ERROR",
+      error: error.message,
+    });
+  }
+});
 export default formPostCheckRouter;

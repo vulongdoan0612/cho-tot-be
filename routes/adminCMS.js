@@ -1,0 +1,195 @@
+import express from "express";
+import User from "../models/userModel.js";
+import cors from "cors";
+import Admin from "../models/adminCMS.js";
+import bcrypt from "bcrypt";
+import { checkAccessToken } from "../middleware/authMiddleware.js";
+import jwt from "jsonwebtoken";
+import FormPostCheck from "../models/formPostCheckModel.js";
+
+const adminRouter = express.Router();
+adminRouter.use(cors());
+
+adminRouter.get("/get-users-cms", checkAccessToken, async (req, res) => {
+  try {
+    const admin = req.user;
+    if (admin.id === "66213dc8577a7e09c3ec5b2e") {
+      const users = await User.find({}, "-password");
+      res.status(200).json({ data: users, status: "SUCCESS" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
+  try {
+    const { postId } = req.body;
+    const admin = req.user;
+    if (admin.id !== "66213dc8577a7e09c3ec5b2e") {
+      return res.status(403).json({ message: "Unauthorized", status: "ERROR" });
+    }
+
+    const updatedPost = await FormPostCheck.findOneAndUpdate(
+      { postId },
+      { censorship: true },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res
+        .status(404)
+        .json({ message: "Post not found", status: "ERROR" });
+    }
+
+    res.status(200).json({
+      message: "Censorship updated successfully",
+      status: "SUCCESS",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
+  try {
+    const { postId } = req.body;
+    const admin = req.user;
+    if (admin.id !== "66213dc8577a7e09c3ec5b2e") {
+      return res.status(403).json({ message: "Unauthorized", status: "ERROR" });
+    }
+
+    const updatedPost = await FormPostCheck.findOneAndUpdate(
+      { postId },
+      { censorship: false },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res
+        .status(404)
+        .json({ message: "Post not found", status: "ERROR" });
+    }
+
+    res.status(200).json({
+      message: "Censorship updated successfully",
+      status: "SUCCESS",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
+  try {
+    const { postId } = req.body;
+
+    // Xóa bài viết có postId tương ứng
+    const deletedPost = await FormPostCheck.findOneAndDelete({ postId });
+
+    if (!deletedPost) {
+      return res
+        .status(404)
+        .json({ message: "Post not found", status: "ERROR" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Post deleted successfully", status: "SUCCESS" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.get("/get-posts-cms", checkAccessToken, async (req, res) => {
+  try {
+    const admin = req.user;
+    if (admin.id === "66213dc8577a7e09c3ec5b2e") {
+      const posts = await FormPostCheck.find({});
+      res.status(200).json({ data: posts, status: "SUCCESS" });
+    } else {
+      res.status(403).json({ message: "Unauthorized", status: "ERROR" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.post("/login-cms", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await Admin.findOne({ email });
+    if (!user) {
+      return res
+        .status(200)
+        .json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
+    }
+    if (user)
+      if (password) {
+        const token = jwt.sign({ id: user._id }, "VinalinkGroup!2020");
+        res
+          .status(200)
+          .json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
+      } else {
+        res.status(200).json({
+          message: "Sai mật khẩu hoặc số điện thoại.",
+          status: "UNSUCCESS",
+        });
+      }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.put("/change-password-cms", checkAccessToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const adminId = req.user.id;
+    const admin = await Admin.findById(adminId);
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      admin.password
+    );
+    if (!isPasswordValid) {
+      return res.status(200).json({ message: "Mật khẩu hiện tại không đúng." });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    admin.password = hashedNewPassword;
+    await admin.save();
+
+    res.status(200).json({
+      message: "Mật khẩu đã được thay đổi thành công.",
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.post("/register-cms", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const existingUser = await Admin.findOne({ email });
+    if (existingUser) {
+      return res.status(201).json({
+        message: "Số điện thoại tài khoản đã tồn tại.",
+        status: "UNSUCCESS",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = new Admin({ email, password: hashedPassword });
+    await admin.save();
+
+    res.status(201).json({
+      message: "Tài khoản được đăng ký thành công.",
+      status: "SUCCESS",
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Xin vui lòng hãy thử lại sau." });
+  }
+});
+export default adminRouter;

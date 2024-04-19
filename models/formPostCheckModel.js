@@ -5,8 +5,9 @@ const formShema = new mongoose.Schema({
   date: { type: String },
   expired: { type: String },
   userId: { type: String },
+  hidden: { type: Boolean },
   post: {
-    image: [{ type: String }],
+    image: [{ uuid: { type: String }, img: { type: String } }],
     value: { type: String },
     title: { type: String },
     dateCar: { type: String },
@@ -35,7 +36,7 @@ const formShema = new mongoose.Schema({
     wardValue: { type: String },
     detailAddress: { type: String },
   },
-  censorship: { type: Boolean },
+  censorship: { type: Boolean || null },
 });
 
 const FormPostCheck = mongoose.model("FormPostCheck", formShema);
