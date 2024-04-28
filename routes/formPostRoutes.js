@@ -2,6 +2,8 @@ import express from "express";
 
 import { checkAccessToken } from "../middleware/authMiddleware.js";
 import cors from "cors";
+import jwt from "jsonwebtoken";
+
 import { initializeApp } from "firebase/app";
 import {
   getStorage,
@@ -18,6 +20,11 @@ import moment from "moment";
 import { v4 as uuidv4 } from "uuid";
 
 import config from "../config/firebase.js";
+import { WebSocketServer } from "ws";
+import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
+
+const wss = new WebSocketServer({ port: 8083 });
+
 initializeApp(config.firebaseConfig);
 const storage = getStorage();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -129,6 +136,7 @@ formPostCheckRouter.post(
         });
 
         await formPost.save();
+        webSocketMessage(wss, "post-form", postId);
 
         res.status(201).json({
           message:
@@ -203,6 +211,7 @@ formPostCheckRouter.post(
         hidden: false,
         censorship: false,
       });
+
       res.status(200).json({ data: postCheck, status: "SUCCESS" });
     } catch (error) {
       console.log(error);

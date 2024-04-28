@@ -6,9 +6,12 @@ import bcrypt from "bcrypt";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
 import jwt from "jsonwebtoken";
 import FormPostCheck from "../models/formPostCheckModel.js";
+import { WebSocket, WebSocketServer } from "ws";
+import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 
 const adminRouter = express.Router();
 adminRouter.use(cors());
+const wss = new WebSocketServer({ port: 8082 });
 
 adminRouter.get("/get-users-cms", checkAccessToken, async (req, res) => {
   try {
@@ -19,6 +22,39 @@ adminRouter.get("/get-users-cms", checkAccessToken, async (req, res) => {
     }
   } catch (error) {
     console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+adminRouter.delete("/delete-user", checkAccessToken, async (req, res) => {
+  try {
+    const { _id } = req.body;
+    const admin = req.user;
+    if (admin.id !== "66213dc8577a7e09c3ec5b2e") {
+      return res.status(403).json({ message: "Unauthorized", status: "ERROR" });
+    }
+    // Kiểm tra xem userId có hợp lệ không
+    if (!_id) {
+      return res
+        .status(400)
+        .json({ message: "Invalid userId", status: "ERROR" });
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    const deletedUser = await User.findOneAndDelete({ _id: _id });
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    if (!deletedUser) {
+      return res
+        .status(404)
+        .json({ message: "User not found", status: "ERROR" });
+    }
+    await FormPostCheck.deleteMany({ userId: _id });
+    webSocketMessage(wss, "delete-user", _id);
+
+    res
+      .status(200)
+      .json({ message: "User deleted successfully", status: "SUCCESS" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -41,6 +77,7 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
         .status(404)
         .json({ message: "Post not found", status: "ERROR" });
     }
+    webSocketMessage(wss, "accept", updatedPost.postId);
 
     res.status(200).json({
       message: "Censorship updated successfully",
@@ -51,6 +88,7 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
   try {
     const { postId } = req.body;
@@ -70,7 +108,7 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
         .status(404)
         .json({ message: "Post not found", status: "ERROR" });
     }
-
+    webSocketMessage(wss, "refuse", updatedPost.postId);
     res.status(200).json({
       message: "Censorship updated successfully",
       status: "SUCCESS",
@@ -84,7 +122,6 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
   try {
     const { postId } = req.body;
 
-    // Xóa bài viết có postId tương ứng
     const deletedPost = await FormPostCheck.findOneAndDelete({ postId });
 
     if (!deletedPost) {
@@ -92,6 +129,7 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
         .status(404)
         .json({ message: "Post not found", status: "ERROR" });
     }
+    webSocketMessage(wss, "delete", updatedPost.postId);
 
     res
       .status(200)

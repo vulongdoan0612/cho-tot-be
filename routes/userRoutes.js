@@ -4,9 +4,12 @@ import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
 import cors from "cors";
+import { WebSocketServer } from "ws";
+import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 
 const userRouter = express.Router();
 userRouter.use(cors());
+const wss = new WebSocketServer({ port: 8084 });
 
 userRouter.post("/register", async (req, res) => {
   const { fullname, password, phone } = req.body;
@@ -22,7 +25,7 @@ userRouter.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ fullname, password: hashedPassword, phone });
     await user.save();
-
+    webSocketMessage(wss, "new-account", fullname);
     res.status(201).json({
       message: "Tài khoản được đăng ký thành công.",
       status: "SUCCESS",
@@ -31,6 +34,7 @@ userRouter.post("/register", async (req, res) => {
     res.status(500).json({ error: "Xin vui lòng hãy thử lại sau." });
   }
 });
+
 userRouter.post("/login", async (req, res) => {
   const { phone, password } = req.body;
   try {
