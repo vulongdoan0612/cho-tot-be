@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema({
     location: { type: String },
     fullCMND: { type: String },
   },
+  selling: { type: String },
+  selled: { type: String },
   faxNumber: { type: String },
   favouriteList: { type: Array, default: undefined },
   sex: { type: String },

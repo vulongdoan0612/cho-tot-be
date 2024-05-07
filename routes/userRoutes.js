@@ -6,6 +6,7 @@ import { checkAccessToken } from "../middleware/authMiddleware.js";
 import cors from "cors";
 import { WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
+import FormPostCheck from "../models/formPostCheckModel.js";
 
 const userRouter = express.Router();
 userRouter.use(cors());
@@ -134,6 +135,26 @@ userRouter.get("/get-profile", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const user = await User.findById(userId).select("-password");
+    const userPosts = await FormPostCheck.find({
+      userId: userId,
+    });
+    // Tính số lượng bài viết có censorship = true
+    const acceptedPostsCount = userPosts.filter(
+      (post) => post.censorship === true && post.hidden === false
+    ).length;
+    const hiddenPostsCount = userPosts.filter(
+      (post) => post.hidden === true && post.censorship === true
+    ).length;
+    // Cập nhật thông tin của User với trường selling
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found", status: "ERROR" });
+    }
+    user.selled = hiddenPostsCount;
+    user.selling = acceptedPostsCount;
+    await user.save();
+
     res.status(200).json({ user: user });
   } catch (error) {
     console.log(error);
