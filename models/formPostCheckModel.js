@@ -5,6 +5,7 @@ const formShema = new mongoose.Schema({
   date: { type: String },
   expired: { type: String },
   userId: { type: String },
+  _id: { type: Object },
   hidden: { type: Boolean },
   userInfo: {
     fullName: { type: String },

@@ -34,24 +34,18 @@ adminRouter.delete("/delete-user", checkAccessToken, async (req, res) => {
     }
     // Kiểm tra xem userId có hợp lệ không
     if (!_id) {
-      return res
-        .status(400)
-        .json({ message: "Invalid userId", status: "ERROR" });
+      return res.status(400).json({ message: "Invalid userId", status: "ERROR" });
     }
 
     const deletedUser = await User.findOneAndDelete({ _id: _id });
 
     if (!deletedUser) {
-      return res
-        .status(404)
-        .json({ message: "User not found", status: "ERROR" });
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
     await FormPostCheck.deleteMany({ userId: _id });
     webSocketMessage(wss, "delete-user", _id);
 
-    res
-      .status(200)
-      .json({ message: "User deleted successfully", status: "SUCCESS" });
+    res.status(200).json({ message: "User deleted successfully", status: "SUCCESS" });
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ error: error.message });
@@ -65,22 +59,14 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized", status: "ERROR" });
     }
 
-    const updatedPost = await FormPostCheck.findOneAndUpdate(
-      { postId },
-      { censorship: true },
-      { new: true }
-    );
+    const updatedPost = await FormPostCheck.findOneAndUpdate({ postId }, { censorship: true }, { new: true });
     if (!updatedPost) {
-      return res
-        .status(404)
-        .json({ message: "Post not found", status: "ERROR" });
+      return res.status(404).json({ message: "Post not found", status: "ERROR" });
     }
 
     const user = await User.findById(updatedPost.userId);
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", status: "ERROR" });
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
 
     // Lấy tất cả các bài viết của user có userId tương tự với bài viết đã cập nhật
@@ -89,12 +75,8 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
     });
 
     // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
-    const acceptedPostsCount = userPosts.filter(
-      (post) => post.censorship === true && post.hidden === false
-    ).length;
-    const hiddenPostsCount = userPosts.filter(
-      (post) => post.hidden === true && post.censorship === true
-    ).length;
+    const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
+    const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     // Cập nhật thông tin của các bài viết của user với trường selling
     await Promise.all(
       userPosts.map(async (post) => {
@@ -104,7 +86,7 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
       })
     );
 
-    webSocketMessage(wss, "accept", updatedPost.postId);
+    webSocketMessage(wss, "accept", updatedPost.postId, updatedPost.userId);
 
     res.status(200).json({
       message: "Censorship updated successfully",
@@ -124,22 +106,14 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized", status: "ERROR" });
     }
 
-    const updatedPost = await FormPostCheck.findOneAndUpdate(
-      { postId },
-      { censorship: false },
-      { new: true }
-    );
+    const updatedPost = await FormPostCheck.findOneAndUpdate({ postId }, { censorship: false }, { new: true });
 
     if (!updatedPost) {
-      return res
-        .status(404)
-        .json({ message: "Post not found", status: "ERROR" });
+      return res.status(404).json({ message: "Post not found", status: "ERROR" });
     }
     const user = await User.findById(updatedPost.userId);
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", status: "ERROR" });
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
 
     // Lấy tất cả các bài viết của user có userId tương tự với bài viết đã cập nhật
@@ -148,12 +122,8 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
     });
 
     // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
-    const acceptedPostsCount = userPosts.filter(
-      (post) => post.censorship === true && post.hidden === false
-    ).length;
-    const hiddenPostsCount = userPosts.filter(
-      (post) => post.hidden === true && post.censorship === true
-    ).length;
+    const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
+    const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     // Cập nhật thông tin của các bài viết của user với trường selling
     await Promise.all(
       userPosts.map(async (post) => {
@@ -163,7 +133,7 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
       })
     );
 
-    webSocketMessage(wss, "refuse", updatedPost.postId);
+    webSocketMessage(wss, "refuse", updatedPost.postId, updatedPost.userId);
     res.status(200).json({
       message: "Censorship updated successfully",
       status: "SUCCESS",
@@ -180,29 +150,21 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
     const deletedPost = await FormPostCheck.findOneAndDelete({ postId });
 
     if (!deletedPost) {
-      return res
-        .status(404)
-        .json({ message: "Post not found", status: "ERROR" });
+      return res.status(404).json({ message: "Post not found", status: "ERROR" });
     }
     const userPosts = await FormPostCheck.find({
       userId: deletedPost.userId,
     });
     const user = await User.findById(deletedPost.userId);
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", status: "ERROR" });
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
 
     // Lấy tất cả các bài viết của user có userId tương tự với bài viết đã cập nhật
 
     // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
-    const acceptedPostsCount = userPosts.filter(
-      (post) => post.censorship === true && post.hidden === false
-    ).length;
-    const hiddenPostsCount = userPosts.filter(
-      (post) => post.hidden === true && post.censorship === true
-    ).length;
+    const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
+    const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     // Cập nhật thông tin của các bài viết của user với trường selling
     await Promise.all(
       userPosts.map(async (post) => {
@@ -212,11 +174,9 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
       })
     );
 
-    webSocketMessage(wss, "delete", deletedPost.postId);
+    webSocketMessage(wss, "delete", deletedPost.postId, updatedPost.userId);
 
-    res
-      .status(200)
-      .json({ message: "Post deleted successfully", status: "SUCCESS" });
+    res.status(200).json({ message: "Post deleted successfully", status: "SUCCESS" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
@@ -241,16 +201,12 @@ adminRouter.post("/login-cms", async (req, res) => {
   try {
     const user = await Admin.findOne({ email });
     if (!user) {
-      return res
-        .status(200)
-        .json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
+      return res.status(200).json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
     }
     if (user)
       if (password) {
         const token = jwt.sign({ id: user._id }, "VinalinkGroup!2020");
-        res
-          .status(200)
-          .json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
+        res.status(200).json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
       } else {
         res.status(200).json({
           message: "Sai mật khẩu hoặc số điện thoại.",
@@ -268,10 +224,7 @@ adminRouter.put("/change-password-cms", checkAccessToken, async (req, res) => {
     const adminId = req.user.id;
     const admin = await Admin.findById(adminId);
 
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      admin.password
-    );
+    const isPasswordValid = await bcrypt.compare(currentPassword, admin.password);
     if (!isPasswordValid) {
       return res.status(200).json({ message: "Mật khẩu hiện tại không đúng." });
     }

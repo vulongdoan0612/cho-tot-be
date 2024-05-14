@@ -6,6 +6,7 @@ import userRouter from "./routes/userRoutes.js";
 import formPostRouter from "./routes/formPostRoutes.js";
 import adminRouter from "./routes/adminCMS.js";
 import { Server } from "http";
+import favPostRouter from "./routes/favPost.js";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ const corsOptions = {
 app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
+app.use("/", favPostRouter);
 
 const port = 5000;
 

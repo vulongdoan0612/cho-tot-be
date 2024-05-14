@@ -1,22 +1,19 @@
 import express from "express";
-
 import { checkAccessToken } from "../middleware/authMiddleware.js";
 import cors from "cors";
 import jwt from "jsonwebtoken";
-
 import { initializeApp } from "firebase/app";
 import { getStorage, ref, getDownloadURL, uploadBytesResumable, listAll, deleteObject } from "firebase/storage";
 import multer from "multer";
-
 import FormPostCheck from "../models/formPostCheckModel.js";
 import moment from "moment";
 import { v4 as uuidv4 } from "uuid";
-
 import config from "../config/firebase.js";
 import { WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import convertToSlug from "../utils/convertToSlug.js";
 import User from "../models/userModel.js";
+import { colorsCar, countriesCar, postCar, statusCar } from "../mock/_mock.js";
 
 const wss = new WebSocketServer({ port: 8083 });
 
@@ -26,10 +23,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 const formPostCheckRouter = express.Router();
 formPostCheckRouter.use(cors());
 
-formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 8), checkAccessToken, async (req, res) => {
+formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId); // Truy xuất thông tin của user từ model User
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found", status: "ERROR" });
@@ -81,22 +78,16 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 8), chec
             contentType: file.mimetype,
           };
 
-          // Tải lên tệp và nhận về snapshot của nó
           const snapshot = await uploadBytesResumable(storageRef, file.buffer, metadata);
 
-          // Lấy URL tải xuống từ snapshot
           const downloadURL = await getDownloadURL(snapshot.ref);
 
-          // Trả về đối tượng chứa id và URL tải xuống
           return { uuid: id, img: downloadURL };
         })
       );
-
       const formPost = new FormPostCheck({
         userId: userId,
         userInfo: {
-          // selling: user.selling,
-          // selled: user.selled,
           fullName: user.fullname,
           districtValueName: user.address.district,
           cityValueName: user.address.city,
@@ -164,7 +155,28 @@ formPostCheckRouter.post("/get-post-check", checkAccessToken, async (req, res) =
     res.status(500).json({ error: error.message });
   }
 });
+formPostCheckRouter.post("/get-post", checkAccessToken, async (req, res) => {
+  try {
+    const { postId } = req.body;
+    const post = await FormPostCheck.findOne({ postId });
+    const wardValueName = post.post.wardValueName;
+    const districtValueName = post.post.districtValueName;
 
+    const relatedPosts = await FormPostCheck.aggregate([
+      {
+        $match: {
+          postId: { $ne: postId },
+          "post.wardValueName": wardValueName,
+          "post.districtValueName": districtValueName,
+        },
+      },
+    ]);
+    res.status(200).json({ post, relatedPosts: relatedPosts });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
 formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -195,79 +207,93 @@ formPostCheckRouter.post("/get-post-check-list-censorship", checkAccessToken, as
 });
 formPostCheckRouter.post("/get-posts", async (req, res) => {
   try {
-    const { pageSize, currentPage, price, form, sit, fuel, numberBox, city, district } = req.query;
+    const {
+      pageSize,
+      currentPage,
+      price,
+      form,
+      sit,
+      fuel,
+      numberBox,
+      city,
+      district,
+      date,
+      km,
+      color,
+      country,
+      model,
+      brand,
+      status,
+      post,
+    } = req.query;
     let filter = {
       hidden: false,
       censorship: true,
     };
+    if (country !== "undefined") {
+      const dataRender = countriesCar.find((item) => item.value === country);
+      filter["post.country"] = { $eq: dataRender.item };
+    }
+    if (model !== "undefined") {
+      filter["post.model"] = { $eq: model };
+    }
+    if (brand !== "undefined") {
+      filter["post.value"] = { $eq: brand };
+    }
+    if (status !== "undefined") {
+      const dataRender = statusCar.find((item) => item.value === status);
+      filter["post.status"] = { $eq: dataRender.item };
+    }
+    if (post !== "undefined") {
+      const dataRender = postCar.find((item) => item.value === post);
+      filter["post.person"] = { $eq: dataRender.item };
+    }
     if (city !== "undefined") {
-      if (city === "tp-ho-chi-minh") {
-        filter["post.cityValueName"] = { $eq: "Thành phố Hồ Chí Minh" };
-      } else if (city === "ha-noi") {
-        filter["post.cityValueName"] = { $eq: "Thành phố Hà Nội" };
-      } else if (city === "da-nang") {
-        filter["post.cityValueName"] = { $eq: "Thành phố Đà Nẵng" };
-      } else if (city === "can-tho") {
-        filter["post.cityValueName"] = { $eq: "Thành phố Cần Thơ" };
-      } else if (city === "binh-duong") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bình Dương" };
-      } else if (city === "ba-ria-vt") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bà Rịa - Vũng Tàu" };
-      } else if (city === "bac-giang") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bắc Giang" };
-      } else if (city === "bac-kan") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bắc Kạn" };
-      } else if (city === "bac-lieu") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bạc Liêu" };
-      } else if (city === "bac-ninh") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bắc Ninh" };
-      } else if (city === "ben-tre") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bến Tre" };
-      } else if (city === "binh-dinh") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bình Định" };
-      } else if (city === "binh-phuoc") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bình Phước" };
-      } else if (city === "binh-thuan") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Bình Thuận" };
-      } else if (city === "ca-mau") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Cà Mau" };
-      } else if (city === "cao-bang") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Cao Bằng" };
-      } else if (city === "dak-lak") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Đắk Lắk" };
-      } else if (city === "dak-nong") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Đắk Nông" };
-      } else if (city === "dien-bien") {
-        filter["post.cityValueName"] = { $eq: "Tỉnh Điện Biên" };
-      } else {
-        filter["post.cityValueName"] = parseInt(city);
-      }
+      filter["post.cityValue"] = { $eq: city };
     }
     if (district !== "undefined") {
-      filter["post.districtValueName"] = { $regex: new RegExp(district, "i") };
+      filter["post.districtValue"] = { $eq: district };
     }
-    if (fuel !== "undefined") {
-      if (fuel === "xang") {
-        filter["post.activeButton"] = { $eq: "Xăng" };
-      } else if (fuel === "dau") {
-        filter["post.activeButton"] = { $eq: "Dầu" };
-      } else if (fuel === "hybrid") {
-        filter["post.activeButton"] = { $eq: "Động cơ Hybrid" };
-      } else if (fuel === "dien") {
-        filter["post.activeButton"] = { $eq: "Điện" };
-      } else {
-        filter["post.activeButton"] = parseInt(fuel);
+    if (km !== "undefined") {
+      const kmParams = km.split("-");
+      console.log(kmParams);
+      if (kmParams.length === 1) {
+        const match = kmParams[0].match(/(min|max)(\d+)/);
+        console.log(match, kmParams[2]);
+        if (match) {
+          if (match[1] === "min") {
+            filter["post.km"] = { $gte: match[2] };
+          } else if (match[1] === "max") {
+            filter["post.km"] = { $lte: match[2] };
+          }
+        }
+      } else if (kmParams.length === 2) {
+        filter["post.km"] = { $lte: kmParams[1], $gte: kmParams[0] };
       }
     }
-    if (numberBox !== "undefined") {
-      if (numberBox === "tu-dong") {
-        filter["post.numberBox"] = { $eq: "Tự động" };
-      } else if (numberBox === "so-san") {
-        filter["post.numberBox"] = { $eq: "Số sàn" };
-      } else if (numberBox === "ban-tu-dong") {
-        filter["post.numberBox"] = { $eq: "Bán tự động" };
+    if (color !== "undefined") {
+      const dataRender = colorsCar.find((item) => item.value === color);
+      filter["post.color"] = { $eq: dataRender.item };
+    }
+    if (form !== "undefined") {
+      if (form === "sudan") {
+        filter["post.form"] = { $eq: "Sudan" };
+      } else if (form === "suv/cross-over") {
+        filter["post.form"] = { $eq: "SUV/Cross over" };
+      } else if (form === "hatchback") {
+        filter["post.form"] = { $eq: "Hatchback" };
+      } else if (form === "pickup") {
+        filter["post.form"] = { $eq: "Pick-up (bán tải)" };
+      } else if (form === "minivan") {
+        filter["post.form"] = { $eq: "Minivan (MPV)" };
+      } else if (form === "van") {
+        filter["post.form"] = { $eq: "Van" };
+      } else if (form === "couple-2-cua") {
+        filter["post.form"] = { $eq: "Couple 2 cửa" };
+      } else if (form === "mui-tran") {
+        filter["post.form"] = { $eq: "Mui trần" };
       } else {
-        filter["post.numberBox"] = parseInt(numberBox);
+        filter["post.form"] = parseInt(form);
       }
     }
     if (sit !== "undefined") {
@@ -297,33 +323,49 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
         filter["post.sit"] = parseInt(sit);
       }
     }
-    if (form !== "undefined") {
-      if (form === "sudan") {
-        filter["post.form"] = { $eq: "Sudan" };
-      } else if (form === "suv/cross-over") {
-        filter["post.form"] = { $eq: "SUV/Cross over" };
-      } else if (form === "hatchback") {
-        filter["post.form"] = { $eq: "Hatchback" };
-      } else if (form === "pickup") {
-        filter["post.form"] = { $eq: "Pick-up (bán tải)" };
-      } else if (form === "minivan") {
-        filter["post.form"] = { $eq: "Minivan (MPV)" };
-      } else if (form === "van") {
-        filter["post.form"] = { $eq: "Van" };
-      } else if (form === "couple-2-cua") {
-        filter["post.form"] = { $eq: "Couple 2 cửa" };
-      } else if (form === "mui-tran") {
-        filter["post.form"] = { $eq: "Mui trần" };
+    if (fuel !== "undefined") {
+      if (fuel === "xang") {
+        filter["post.activeButton"] = { $eq: "Xăng" };
+      } else if (fuel === "dau") {
+        filter["post.activeButton"] = { $eq: "Dầu" };
+      } else if (fuel === "hybrid") {
+        filter["post.activeButton"] = { $eq: "Động cơ Hybrid" };
+      } else if (fuel === "dien") {
+        filter["post.activeButton"] = { $eq: "Điện" };
       } else {
-        filter["post.form"] = parseInt(form);
+        filter["post.activeButton"] = parseInt(fuel);
       }
     }
-    const match = price.match(/(min|max)(\d+)/);
+    if (numberBox !== "undefined") {
+      if (numberBox === "tu-dong") {
+        filter["post.numberBox"] = { $eq: "Tự động" };
+      } else if (numberBox === "so-san") {
+        filter["post.numberBox"] = { $eq: "Số sàn" };
+      } else if (numberBox === "ban-tu-dong") {
+        filter["post.numberBox"] = { $eq: "Bán tự động" };
+      } else {
+        filter["post.numberBox"] = parseInt(numberBox);
+      }
+    }
 
-    console.log(match, "test");
+    if (date !== "undefined") {
+      const dateParams = date.split("-");
+      if (dateParams.length === 1) {
+        const match = dateParams[0].match(/(min|max)(\d+)/);
+        if (match) {
+          if (match[1] === "min") {
+            filter["post.dateCar"] = { $gte: match[2] };
+          } else if (match[1] === "max") {
+            filter["post.dateCar"] = { $lte: match[2] };
+          }
+        }
+      } else if (dateParams.length === 2) {
+        filter["post.dateCar"] = { $lte: dateParams[1], $gte: dateParams[0] };
+      }
+    }
     if (price !== "undefined") {
       if (price === "un200tr") {
-        filter["post.price"] = { $lt: 200000000 };
+        filter["post.price"] = { $lte: 200000000 };
       } else if (price === "200tr-300tr") {
         filter["post.price"] = { $gte: 200000000, $lte: 300000000 };
       } else if (price === "300tr-400tr") {
@@ -343,20 +385,15 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       } else if (price === "up2t") {
         filter["post.price"] = { $gte: 2000000000 };
       } else if (match[1] === "max") {
-        filter["post.price"] = { $lt: match[2] };
-
-        // Phân tích giá trị price thành hai phần, số thứ nhất và số thứ hai
+        filter["post.price"] = { $lte: match[2] };
       } else if (match[1] === "min") {
         filter["post.price"] = { $gte: match[2] };
       } else {
         if (!isNaN(lowerPrice) && !isNaN(upperPrice)) {
           filter["post.price"] = { $gte: lowerPrice, $lte: upperPrice };
         } else {
-          // Xử lý nếu giá trị không hợp lệ
         }
       }
-      // const [lowerPrice, upperPrice] = price.split("-").map((item) => parseInt(item));
-      // // Kiểm tra xem cả hai phần đã được chuyển đổi thành số chưa
     }
     const skipCount = (currentPage - 1) * pageSize;
     const totalRecords = await FormPostCheck.countDocuments(filter);
@@ -396,12 +433,10 @@ formPostCheckRouter.post("/get-post-hidden-list", checkAccessToken, async (req, 
 formPostCheckRouter.post("/update-post-hidden", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { postId } = req.body; // Lấy postId từ body của request
+    const { postId } = req.body;
 
-    // Kiểm tra xem có bản ghi FormPostCheck nào có userId và postId khớp và hidden là false hay không
     const postCheck = await FormPostCheck.findOneAndUpdate({ userId: userId, postId: postId }, { hidden: false }, { new: true });
 
-    // Nếu không tìm thấy bản ghi hoặc không có sự khớp, trả về lỗi
     if (!postCheck) {
       return res.status(404).json({
         message: "Không tìm thấy bài đăng hoặc không có quyền truy cập",
@@ -412,10 +447,9 @@ formPostCheckRouter.post("/update-post-hidden", checkAccessToken, async (req, re
       userId: postCheck.userId,
     });
 
-    // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-    // Cập nhật thông tin của các bài viết của user với trường selling
+
     await Promise.all(
       userPosts.map(async (post) => {
         post.userInfo.selling = acceptedPostsCount;
@@ -424,14 +458,13 @@ formPostCheckRouter.post("/update-post-hidden", checkAccessToken, async (req, re
       })
     );
 
-    // Nếu tìm thấy và cập nhật thành công, trả về dữ liệu cập nhật với mã trạng thái 200
     res.status(200).json({ data: postCheck, status: "SUCCESS" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
-formPostCheckRouter.put("/edit-post-form-sell-check", upload.array("image", 9), checkAccessToken, async (req, res) => {
+formPostCheckRouter.put("/edit-post-form-sell-check", upload.array("image", 20), checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -587,7 +620,7 @@ formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
   try {
     const { postId } = req.body;
     const userId = req.user.id;
-    // Kiểm tra nếu postId không tồn tại
+
     const existingPost = await FormPostCheck.findOne({ postId: postId });
     if (!existingPost) {
       return res.status(404).json({ message: "Không tìm thấy bài đăng", status: "ERROR" });
@@ -598,18 +631,16 @@ formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
         status: "ERROR",
       });
     }
-    // Thêm trường hidden là true vào bản ghi và lưu lại
+
     existingPost.hidden = true;
     const updatedPost = await existingPost.save();
     const userPosts = await FormPostCheck.find({
       userId: updatedPost.userId,
     });
 
-    // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
 
-    // Cập nhật thông tin của các bài viết của user với trường selling
     await Promise.all(
       userPosts.map(async (post) => {
         post.userInfo.selling = acceptedPostsCount;

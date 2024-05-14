@@ -7,7 +7,6 @@ import cors from "cors";
 import { WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
-
 const userRouter = express.Router();
 userRouter.use(cors());
 const wss = new WebSocketServer({ port: 8084 });
@@ -41,16 +40,12 @@ userRouter.post("/login", async (req, res) => {
   try {
     const user = await User.findOne({ phone });
     if (!user) {
-      return res
-        .status(200)
-        .json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
+      return res.status(200).json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (isPasswordValid) {
       const token = jwt.sign({ id: user._id }, "VinalinkGroup!2020");
-      res
-        .status(200)
-        .json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
+      res.status(200).json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
     } else {
       res.status(200).json({
         message: "Sai mật khẩu hoặc số điện thoại.",
@@ -63,16 +58,7 @@ userRouter.post("/login", async (req, res) => {
 });
 
 userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
-  const {
-    address,
-    introduction,
-    identifyCard,
-    favouriteList,
-    rememberName,
-    faxNumber,
-    sex,
-    birthdate,
-  } = req.body;
+  const { address, introduction, identifyCard, favouriteList, rememberName, faxNumber, sex, birthdate } = req.body;
 
   try {
     const userId = req.user.id;
@@ -93,9 +79,7 @@ userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
       select: "-password",
     });
 
-    res
-      .status(200)
-      .json({ message: "Chỉnh sửa thông tin thành công.", user: updatedUser });
+    res.status(200).json({ message: "Chỉnh sửa thông tin thành công.", user: updatedUser });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
@@ -108,10 +92,7 @@ userRouter.put("/change-password", checkAccessToken, async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
 
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password
-    );
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
       return res.status(200).json({ message: "Mật khẩu hiện tại không đúng." });
     }
@@ -138,18 +119,10 @@ userRouter.get("/get-profile", checkAccessToken, async (req, res) => {
     const userPosts = await FormPostCheck.find({
       userId: userId,
     });
-    // Tính số lượng bài viết có censorship = true
-    const acceptedPostsCount = userPosts.filter(
-      (post) => post.censorship === true && post.hidden === false
-    ).length;
-    const hiddenPostsCount = userPosts.filter(
-      (post) => post.hidden === true && post.censorship === true
-    ).length;
-    // Cập nhật thông tin của User với trường selling
+    const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
+    const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", status: "ERROR" });
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
     user.selled = hiddenPostsCount;
     user.selling = acceptedPostsCount;
@@ -161,5 +134,28 @@ userRouter.get("/get-profile", checkAccessToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+userRouter.post("/get-detail-profile-user", async (req, res) => {
+  try {
+    const userId = req.body.userId;
+    const user = await User.findById(userId).select("fullname address phone introduction rememberName selled selling sex");
+    const userPosts = await FormPostCheck.find({
+      userId: userId,
+    }).select("post.title post.price post.slug post.image postId date userId censorship hidden");
+    const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
+    const acceptedPosts = userPosts.filter((post) => post.censorship === true && post.hidden === false);
+    const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
+    const hiddenPost = userPosts.filter((post) => post.hidden === true && post.censorship === true);
+    if (!user) {
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
+    }
+    user.selled = hiddenPostsCount;
+    user.selling = acceptedPostsCount;
+    await user.save();
 
+    res.status(200).json({ user: user, acceptedPosts: acceptedPosts, hiddenPost: hiddenPost });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
 export default userRouter;
