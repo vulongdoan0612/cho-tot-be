@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import FormPostCheck from "../models/formPostCheckModel.js";
 import { WebSocket, WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
+import FavPost from "../models/favPost.js";
 
 const adminRouter = express.Router();
 adminRouter.use(cors());
@@ -68,16 +69,12 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
-
-    // Lấy tất cả các bài viết của user có userId tương tự với bài viết đã cập nhật
     const userPosts = await FormPostCheck.find({
       userId: updatedPost.userId,
     });
 
-    // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-    // Cập nhật thông tin của các bài viết của user với trường selling
     await Promise.all(
       userPosts.map(async (post) => {
         post.userInfo.selling = acceptedPostsCount;
@@ -116,15 +113,12 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
       return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
 
-    // Lấy tất cả các bài viết của user có userId tương tự với bài viết đã cập nhật
     const userPosts = await FormPostCheck.find({
       userId: updatedPost.userId,
     });
 
-    // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-    // Cập nhật thông tin của các bài viết của user với trường selling
     await Promise.all(
       userPosts.map(async (post) => {
         post.userInfo.selling = acceptedPostsCount;
@@ -132,6 +126,7 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
         await post.save();
       })
     );
+    await FavPost.updateMany({}, { $pull: { postFavList: { postId } } });
 
     webSocketMessage(wss, "refuse", updatedPost.postId, updatedPost.userId);
     res.status(200).json({
@@ -166,6 +161,7 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     // Cập nhật thông tin của các bài viết của user với trường selling
+    await FavPost.updateMany({}, { $pull: { postFavList: { postId } } });
     await Promise.all(
       userPosts.map(async (post) => {
         post.userInfo.selling = acceptedPostsCount;
@@ -173,7 +169,6 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
         await post.save();
       })
     );
-
     webSocketMessage(wss, "delete", deletedPost.postId, updatedPost.userId);
 
     res.status(200).json({ message: "Post deleted successfully", status: "SUCCESS" });

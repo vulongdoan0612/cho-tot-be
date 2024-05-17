@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 
 const formShema = new mongoose.Schema({
+  // _id: { type: Object },
   postId: { type: String },
   date: { type: String },
   expired: { type: String },
   userId: { type: String },
-  _id: { type: Object },
   hidden: { type: Boolean },
   userInfo: {
     fullName: { type: String },

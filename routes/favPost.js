@@ -90,14 +90,13 @@ favPostRouter.post("/get-fav-post", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const favPost = await FavPost.findOne({ userId });
-    console.log(userId);
     if (!favPost) {
       return res.status(200).json({ favouritePosts: [], status: "SUCCESS" });
     }
 
     const postIds = favPost.postFavList.map((item) => item.postId);
 
-    const posts = await FormPostCheck.find({ postId: { $in: postIds } });
+    const posts = await FormPostCheck.find({ postId: { $in: postIds }, censorship: true });
 
     res.status(200).json({ favouritePosts: posts, status: "SUCCESS" });
   } catch (error) {

@@ -7,6 +7,7 @@ import formPostRouter from "./routes/formPostRoutes.js";
 import adminRouter from "./routes/adminCMS.js";
 import { Server } from "http";
 import favPostRouter from "./routes/favPost.js";
+import chatRouter from "./routes/chat.js";
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
+app.use("/", chatRouter);
 
 const port = 5000;
 

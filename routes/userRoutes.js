@@ -122,7 +122,7 @@ userRouter.get("/get-profile", checkAccessToken, async (req, res) => {
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     if (!user) {
-      return res.status(404).json({ message: "User not found", status: "ERROR" });
+      return res.status(200).json({ message: "User not found", status: "ERROR" });
     }
     user.selled = hiddenPostsCount;
     user.selling = acceptedPostsCount;

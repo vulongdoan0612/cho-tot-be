@@ -158,7 +158,10 @@ formPostCheckRouter.post("/get-post-check", checkAccessToken, async (req, res) =
 formPostCheckRouter.post("/get-post", checkAccessToken, async (req, res) => {
   try {
     const { postId } = req.body;
-    const post = await FormPostCheck.findOne({ postId });
+    const post = await FormPostCheck.findOne({ postId, censorship: true, hidden: false });
+    if (post === null) {
+      return res.status(200).json({ status: "404" });
+    }
     const wardValueName = post.post.wardValueName;
     const districtValueName = post.post.districtValueName;
 
