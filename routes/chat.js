@@ -8,6 +8,7 @@ import FormPostCheck from "../models/formPostCheckModel.js";
 import User from "../models/userModel.js";
 import { webSocketChat } from "../middleware/sendWebSocketChat.js";
 import { webSocketCreateRoom } from "../middleware/createWebSocketChat.js";
+import { sendAnnouce } from "../middleware/sendAnnounce.js";
 
 const chatRouter = express.Router();
 chatRouter.use(cors());
@@ -27,26 +28,54 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
       userId: userId,
       text: text,
     };
-    if (chatRoom.messagesRoom.message.length > 0) {
-      const lastMessage = chatRoom.messagesRoom.message[0];
-      const currentDate = newMessage.time;
+    const messages = chatRoom.messagesRoom.message;
+    const currentDate = newMessage.time;
 
-      if (!isSameDay(lastMessage.time, currentDate)) {
-        newMessage.firstTextDate = newMessage.time;
-      }
+    // Xử lý logic để gán firstTextDate
+    if (messages.length === 0) {
+      // Trường hợp mảng messages rỗng
+      newMessage.firstTextDate = currentDate;
     } else {
-      newMessage.firstTextDate = newMessage.time;
+      // Tìm tin nhắn cuối cùng trong mảng
+      const lastMessage = messages[messages.length - 1];
+
+      // Nếu tin nhắn cuối cùng không cùng ngày với tin nhắn hiện tại, gán firstTextDate là thời gian hiện tại
+      if (!isSameDay(lastMessage.time, currentDate)) {
+        newMessage.firstTextDate = currentDate;
+      } else {
+        // Kiểm tra các tin nhắn trong ngày hiện tại
+        const firstMessageOfDay = messages.find((msg) => isSameDay(msg.time, currentDate));
+        if (!firstMessageOfDay) {
+          newMessage.firstTextDate = currentDate;
+        }
+      }
     }
     chatRoom.messagesRoom.message.push(newMessage);
+    if (userId === chatRoom.userSend) {
+      chatRoom.userReceivePop = true;
+    } else {
+      chatRoom.userSendPop = true;
+    }
     await chatRoom.save();
 
     webSocketChat(wss, "post-message", idRoom);
-
+    if (userId === chatRoom.userSend) {
+      const userPop = await User.findById(chatRoom.userReceive);
+      userPop.announceChat = true;
+      await userPop.save();
+      sendAnnouce(wss, "annouce", chatRoom.userReceive, "chat");
+    } else {
+      const userPop = await User.findById(chatRoom.userSend);
+      userPop.announceChat = true;
+      await userPop.save();
+      sendAnnouce(wss, "annouce", chatRoom.userSend, "chat");
+    }
     res.status(200).json(chatRoom);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 chatRouter.post("/create-room", checkAccessToken, async (req, res) => {
   try {
     const { postId } = req.body;
@@ -132,7 +161,23 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     const formPostChecks = await FormPostCheck.find({ postId: chatRoom[0].postId }).select(
       "userInfo.fullName post.image.img post.title post.price postId"
     );
+    // Kiểm tra và cập nhật userReceivePop và userSendPop
+    if (req.user.id === chatRoom[0].userReceive) {
+      chatRoom[0].userReceivePop = false;
+    } else if (req.user.id === chatRoom[0].userSend) {
+      chatRoom[0].userSendPop = false;
+    }
 
+    // Lưu lại các thay đổi trong chatRoom
+    await chatRoom[0].save();
+    const allChatRooms = await Chat.find({ userReceive: req.user.id });
+    const allPopsFalse = allChatRooms.every((room) => room.userReceivePop === false);
+
+    if (allPopsFalse) {
+      const userPop = await User.findById(req.user.id);
+      userPop.announceChat = false;
+      await userPop.save();
+    }
     chatRoom[0] = {
       ...chatRoom[0]._doc,
       userSendInfo: {
@@ -150,6 +195,9 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
         postId: fp.postId,
       })),
     };
+    sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
+    sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
+
     res.status(200).json(chatRoom[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -199,12 +247,6 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
     const posts = await FormPostCheck.find({ postId: { $in: postIds }, censorship: true, hidden: false }).select(
       "userInfo.fullName post.image.img post.title post.price postId "
     );
-    const filteredPosts = search
-      ? posts.filter((post) => {
-          const regex = new RegExp(`^${search}`, "i");
-          return regex.test(post.userInfo.fullName);
-        })
-      : posts;
 
     const updatedPosts = await Promise.all(
       updatedConversations.map(async (conversation) => {
@@ -219,6 +261,7 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
         const searchLowerCase = removeAccents(search.toLowerCase().trim());
         if (fullNameLowerCase && removeAccents(fullNameLowerCase).includes(searchLowerCase)) {
           const post = posts.find((p) => p.postId === conversation.postId);
+
           return {
             ...post._doc,
             idRoom: conversation.idRoom,
@@ -272,6 +315,8 @@ chatRouter.post("/get-all-conversation-summary", checkAccessToken, async (req, r
         conversation.lastTextToNow = lastMessage.time;
       }
       return {
+        userReceivePop: conversation.userSendPop,
+        userSendPop: conversation.userReceivePop,
         idRoom: conversation.idRoom,
         lastText: conversation.lastText,
         lastTextToNow: conversation.lastTextToNow,

@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   fullname: { type: String, required: true },
   phone: { type: String, required: true },
   password: { type: String, required: true },
+  dateJoin: { type: Date, default: null },
   address: {
     city: { type: String },
     district: { type: String },
@@ -16,6 +17,7 @@ const userSchema = new mongoose.Schema({
       type: String,
     },
   },
+  announceChat: { type: Boolean, default: false },
   rememberName: { type: String },
   introduction: { type: String },
   identifyCard: {

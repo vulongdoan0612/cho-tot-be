@@ -13,6 +13,7 @@ const wss = new WebSocketServer({ port: 8084 });
 
 userRouter.post("/register", async (req, res) => {
   const { fullname, password, phone } = req.body;
+  const currentTime = new Date();
 
   try {
     const existingUser = await User.findOne({ phone });
@@ -24,6 +25,7 @@ userRouter.post("/register", async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ fullname, password: hashedPassword, phone });
+    user.dateJoin = currentTime;
     await user.save();
     webSocketMessage(wss, "new-account", fullname);
     res.status(201).json({
@@ -134,13 +136,28 @@ userRouter.get("/get-profile", checkAccessToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+userRouter.post("/get-announce-chat", checkAccessToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select("announceChat _id");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
+    }
+
+    res.status(200).json({ announceChat: user.announceChat, _id: user._id });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
 userRouter.post("/get-detail-profile-user", async (req, res) => {
   try {
-    const userId = req.body.userId;
+    const { userId } = req.body;
     const user = await User.findById(userId).select("fullname address phone introduction rememberName selled selling sex");
     const userPosts = await FormPostCheck.find({
       userId: userId,
-    }).select("post.title post.price post.slug post.image postId date userId censorship hidden");
+    }).select("post.title post.price post.slug post.image postId date userId censorship hidden dateJoin");
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const acceptedPosts = userPosts.filter((post) => post.censorship === true && post.hidden === false);
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;

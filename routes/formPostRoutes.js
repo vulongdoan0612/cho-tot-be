@@ -14,6 +14,7 @@ import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import convertToSlug from "../utils/convertToSlug.js";
 import User from "../models/userModel.js";
 import { colorsCar, countriesCar, postCar, statusCar } from "../mock/_mock.js";
+import { viewPost } from "../middleware/viewPost.js";
 
 const wss = new WebSocketServer({ port: 8083 });
 
@@ -162,9 +163,12 @@ formPostCheckRouter.post("/get-post", checkAccessToken, async (req, res) => {
     if (post === null) {
       return res.status(200).json({ status: "404" });
     }
+    post.view += 1;
+
+    await post.save();
     const wardValueName = post.post.wardValueName;
     const districtValueName = post.post.districtValueName;
-
+    
     const relatedPosts = await FormPostCheck.aggregate([
       {
         $match: {
@@ -174,6 +178,8 @@ formPostCheckRouter.post("/get-post", checkAccessToken, async (req, res) => {
         },
       },
     ]);
+    viewPost(wss, "update-view-post", post.userId, postId);
+
     res.status(200).json({ post, relatedPosts: relatedPosts });
   } catch (error) {
     console.log(error);

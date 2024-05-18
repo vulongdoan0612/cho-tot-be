@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 
 const formShema = new mongoose.Schema({
-  // _id: { type: Object },
+  _id: { type: Object },
   postId: { type: String },
   date: { type: String },
   expired: { type: String },
   userId: { type: String },
   hidden: { type: Boolean },
+  view: { type: Number, default: 0 },
   userInfo: {
     fullName: { type: String },
     districtValueName: { type: String },
