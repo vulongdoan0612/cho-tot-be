@@ -63,6 +63,7 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), che
       wardValue,
       detailAddress,
     } = req.body;
+    console.log(cityValue);
     if (req.files) {
       const postIdRef = ref(storage, `images/post/${userId}/${postId}`);
       const postIdSnapshot = await getDownloadURL(postIdRef).catch(() => null);
@@ -97,7 +98,7 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), che
         },
         postId,
         hidden: false,
-        date: moment().format("DD-MM-YYYY"),
+        date: new Date(),
         post: {
           value,
           dateCar,
@@ -156,19 +157,18 @@ formPostCheckRouter.post("/get-post-check", checkAccessToken, async (req, res) =
     res.status(500).json({ error: error.message });
   }
 });
-formPostCheckRouter.post("/get-post", checkAccessToken, async (req, res) => {
+formPostCheckRouter.post("/get-post", async (req, res) => {
   try {
     const { postId } = req.body;
-    const post = await FormPostCheck.findOne({ postId, censorship: true, hidden: false });
+    const post = await FormPostCheck.findOne({ postId: postId, censorship: true, hidden: false });
     if (post === null) {
       return res.status(200).json({ status: "404" });
     }
-    post.view += 1;
+    await FormPostCheck.findOneAndUpdate({ postId: postId, censorship: true, hidden: false }, { $inc: { view: 1 } });
 
-    await post.save();
     const wardValueName = post.post.wardValueName;
     const districtValueName = post.post.districtValueName;
-    
+
     const relatedPosts = await FormPostCheck.aggregate([
       {
         $match: {
@@ -189,15 +189,41 @@ formPostCheckRouter.post("/get-post", checkAccessToken, async (req, res) => {
 formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const postCheck = await FormPostCheck.find({
+    const allPostCheck = await FormPostCheck.find({
+      hidden: false,
+      censorship: true,
+    });
+
+
+    const userPostCheck = await FormPostCheck.find({
       userId,
       hidden: false,
       censorship: true,
     });
-    res.status(200).json({ data: postCheck, status: "SUCCESS" });
+
+    userPostCheck.forEach((post) => {
+      const index = allPostCheck.findIndex((p) => p._id.toString() === post._id.toString());
+      if (index !== -1) {
+        post.currentPage = Math.floor(index / 7) + 1;
+      }
+    });
+
+    res.status(200).json({ data: userPostCheck, status: "SUCCESS", totalPage: allPostCheck.length / 7 });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
+  }
+});
+formPostCheckRouter.get("/get-posts-current", async (req, res) => {
+  try {
+    const latestPosts = await FormPostCheck.find({ censorship: true, hidden: false })
+      .sort({ date: -1 }) 
+      .limit(12); 
+
+    res.status(200).json({ latestPosts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 formPostCheckRouter.post("/get-post-check-list-censorship", checkAccessToken, async (req, res) => {
@@ -265,10 +291,8 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
     }
     if (km !== "undefined") {
       const kmParams = km.split("-");
-      console.log(kmParams);
       if (kmParams.length === 1) {
         const match = kmParams[0].match(/(min|max)(\d+)/);
-        console.log(match, kmParams[2]);
         if (match) {
           if (match[1] === "min") {
             filter["post.km"] = { $gte: match[2] };
@@ -458,12 +482,14 @@ formPostCheckRouter.post("/update-post-hidden", checkAccessToken, async (req, re
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-
     await Promise.all(
       userPosts.map(async (post) => {
-        post.userInfo.selling = acceptedPostsCount;
-        post.userInfo.selled = hiddenPostsCount;
-        await post.save();
+        await post.updateOne({
+          $set: {
+            "userInfo.selling": acceptedPostsCount,
+            "userInfo.selled": hiddenPostsCount,
+          },
+        });
       })
     );
 
@@ -641,20 +667,25 @@ formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
       });
     }
 
-    existingPost.hidden = true;
-    const updatedPost = await existingPost.save();
+    const updatedPost = await FormPostCheck.findOneAndUpdate(
+      { postId: postId },
+      { $set: { hidden: true } },
+      { new: true } 
+    );
     const userPosts = await FormPostCheck.find({
       userId: updatedPost.userId,
     });
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-
     await Promise.all(
       userPosts.map(async (post) => {
-        post.userInfo.selling = acceptedPostsCount;
-        post.userInfo.selled = hiddenPostsCount;
-        await post.save();
+        await post.updateOne({
+          $set: {
+            "userInfo.selling": acceptedPostsCount,
+            "userInfo.selled": hiddenPostsCount,
+          },
+        });
       })
     );
 

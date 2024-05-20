@@ -157,7 +157,7 @@ userRouter.post("/get-detail-profile-user", async (req, res) => {
     const user = await User.findById(userId).select("fullname address phone introduction rememberName selled selling sex");
     const userPosts = await FormPostCheck.find({
       userId: userId,
-    }).select("post.title post.price post.slug post.image postId date userId censorship hidden dateJoin");
+    }).select("post.title post.price post.slug post.image postId date userId censorship hidden dateJoin post.cityValueName");
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const acceptedPosts = userPosts.filter((post) => post.censorship === true && post.hidden === false);
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;

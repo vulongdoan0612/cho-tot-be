@@ -33,7 +33,6 @@ adminRouter.delete("/delete-user", checkAccessToken, async (req, res) => {
     if (admin.id !== "66213dc8577a7e09c3ec5b2e") {
       return res.status(403).json({ message: "Unauthorized", status: "ERROR" });
     }
-    // Kiểm tra xem userId có hợp lệ không
     if (!_id) {
       return res.status(400).json({ message: "Invalid userId", status: "ERROR" });
     }
@@ -155,12 +154,9 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
       return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
 
-    // Lấy tất cả các bài viết của user có userId tương tự với bài viết đã cập nhật
 
-    // Tính số lượng bài viết đã chấp nhận (censorship = true) và ẩn đi (hidden = true)
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-    // Cập nhật thông tin của các bài viết của user với trường selling
     await FavPost.updateMany({}, { $pull: { postFavList: { postId } } });
     await Promise.all(
       userPosts.map(async (post) => {

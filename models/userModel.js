@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   dateJoin: { type: Date, default: null },
   address: {
+    cityValue: { type: String },
+    districtValue: { type: String },
+    wardValue: { type: String },
+
     city: { type: String },
     district: { type: String },
     ward: { type: String },

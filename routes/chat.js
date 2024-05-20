@@ -31,19 +31,14 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
     const messages = chatRoom.messagesRoom.message;
     const currentDate = newMessage.time;
 
-    // Xử lý logic để gán firstTextDate
     if (messages.length === 0) {
-      // Trường hợp mảng messages rỗng
       newMessage.firstTextDate = currentDate;
     } else {
-      // Tìm tin nhắn cuối cùng trong mảng
       const lastMessage = messages[messages.length - 1];
 
-      // Nếu tin nhắn cuối cùng không cùng ngày với tin nhắn hiện tại, gán firstTextDate là thời gian hiện tại
       if (!isSameDay(lastMessage.time, currentDate)) {
         newMessage.firstTextDate = currentDate;
       } else {
-        // Kiểm tra các tin nhắn trong ngày hiện tại
         const firstMessageOfDay = messages.find((msg) => isSameDay(msg.time, currentDate));
         if (!firstMessageOfDay) {
           newMessage.firstTextDate = currentDate;
@@ -104,9 +99,9 @@ chatRouter.post("/set-hidden", checkAccessToken, async (req, res) => {
   try {
     const { hiddenChatList } = req.body;
     const userId = req.user.id;
-    // Find the chat with the given idRoom
+
     const idRooms = hiddenChatList.map((chat) => chat.idRoom);
-    const chats = await Chat.find({ idRoom: { $in: idRooms } }); // Set hidden to true for each chat and save
+    const chats = await Chat.find({ idRoom: { $in: idRooms } });
 
     await Promise.all(
       chats.map(async (chat) => {
@@ -128,10 +123,9 @@ chatRouter.post("/set-hidden-false", checkAccessToken, async (req, res) => {
   try {
     const { idRoom } = req.body;
     const userId = req.user.id;
-    // Find the chat with the given idRoom
+
     const chats = await Chat.find({ idRoom: { $in: idRoom } });
 
-    // Set hidden to false for each chat and save
     await Promise.all(
       chats.map(async (chat) => {
         if (userId === chat.userSend) {
@@ -161,14 +155,13 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     const formPostChecks = await FormPostCheck.find({ postId: chatRoom[0].postId }).select(
       "userInfo.fullName post.image.img post.title post.price postId"
     );
-    // Kiểm tra và cập nhật userReceivePop và userSendPop
+
     if (req.user.id === chatRoom[0].userReceive) {
       chatRoom[0].userReceivePop = false;
     } else if (req.user.id === chatRoom[0].userSend) {
       chatRoom[0].userSendPop = false;
     }
 
-    // Lưu lại các thay đổi trong chatRoom
     await chatRoom[0].save();
     const allChatRooms = await Chat.find({ userReceive: req.user.id });
     const allPopsFalse = allChatRooms.every((room) => room.userReceivePop === false);
@@ -243,6 +236,7 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
       }
       return conversation;
     });
+
     const postIds = updatedConversations.map((item) => item.postId);
     const posts = await FormPostCheck.find({ postId: { $in: postIds }, censorship: true, hidden: false }).select(
       "userInfo.fullName post.image.img post.title post.price postId "
@@ -273,7 +267,7 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
         }
       })
     );
-    const filteredUpdatedPosts = updatedPosts.filter((post) => post); // Lọc bỏ các giá trị null
+    const filteredUpdatedPosts = updatedPosts.filter((post) => post); 
 
     res.status(200).json(filteredUpdatedPosts);
   } catch (error) {
@@ -304,9 +298,6 @@ chatRouter.post("/get-all-conversation-summary", checkAccessToken, async (req, r
       return false;
     });
 
-    // const conversations = await Chat.find(condition);
-
-    // Cập nhật lastText và lastTextToNow cho mỗi cuộc trò chuyện
     const updatedConversations = filteredConversations.map((conversation) => {
       const messages = conversation.messagesRoom.message;
       if (messages.length > 0) {
@@ -320,9 +311,14 @@ chatRouter.post("/get-all-conversation-summary", checkAccessToken, async (req, r
         idRoom: conversation.idRoom,
         lastText: conversation.lastText,
         lastTextToNow: conversation.lastTextToNow,
+        postId: conversation.postId,
       };
     });
-
+    updatedConversations.sort((a, b) => {
+      const aTime = new Date(a.lastTextToNow).getTime();
+      const bTime = new Date(b.lastTextToNow).getTime();
+      return bTime - aTime;
+    });
     res.status(200).json(updatedConversations);
   } catch (error) {
     res.status(500).json({ error: error.message });
