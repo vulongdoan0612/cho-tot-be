@@ -74,14 +74,16 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-    await Promise.all(
-      userPosts.map(async (post) => {
-        post.userInfo.selling = acceptedPostsCount;
-        post.userInfo.selled = hiddenPostsCount;
-        await post.save();
-      })
-    );
 
+    await FormPostCheck.updateMany(
+      { userId: updatedPost.userId },
+      {
+        $set: {
+          "userInfo.selling": acceptedPostsCount,
+          "userInfo.selled": hiddenPostsCount,
+        },
+      }
+    );
     webSocketMessage(wss, "accept", updatedPost.postId, updatedPost.userId);
 
     res.status(200).json({
@@ -118,12 +120,15 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-    await Promise.all(
-      userPosts.map(async (post) => {
-        post.userInfo.selling = acceptedPostsCount;
-        post.userInfo.selled = hiddenPostsCount;
-        await post.save();
-      })
+
+    await FormPostCheck.updateMany(
+      { userId: updatedPost.userId },
+      {
+        $set: {
+          "userInfo.selling": acceptedPostsCount,
+          "userInfo.selled": hiddenPostsCount,
+        },
+      }
     );
     await FavPost.updateMany({}, { $pull: { postFavList: { postId } } });
 
@@ -154,16 +159,17 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
       return res.status(404).json({ message: "User not found", status: "ERROR" });
     }
 
-
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     await FavPost.updateMany({}, { $pull: { postFavList: { postId } } });
-    await Promise.all(
-      userPosts.map(async (post) => {
-        post.userInfo.selling = acceptedPostsCount;
-        post.userInfo.selled = hiddenPostsCount;
-        await post.save();
-      })
+    await FormPostCheck.updateMany(
+      { userId: updatedPost.userId },
+      {
+        $set: {
+          "userInfo.selling": acceptedPostsCount,
+          "userInfo.selled": hiddenPostsCount,
+        },
+      }
     );
     webSocketMessage(wss, "delete", deletedPost.postId, updatedPost.userId);
 

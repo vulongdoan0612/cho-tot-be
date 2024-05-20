@@ -150,8 +150,8 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     if (!chatRoom.length) {
       return res.status(404).json({ error: "Chat room not found" });
     }
-    const userSendInfo = await User.findById(chatRoom[0].userSend).select("fullname");
-    const userReceiveInfo = await User.findById(chatRoom[0].userReceive).select("fullname");
+    const userSendInfo = await User.findById(chatRoom[0].userSend).select("fullname avatar");
+    const userReceiveInfo = await User.findById(chatRoom[0].userReceive).select("fullname avatar");
     const formPostChecks = await FormPostCheck.find({ postId: chatRoom[0].postId }).select(
       "userInfo.fullName post.image.img post.title post.price postId"
     );
@@ -176,10 +176,12 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
       userSendInfo: {
         _id: userSendInfo._id,
         fullName: userSendInfo.fullname,
+        avatar: userSendInfo.avatar,
       },
       userReceiveInfo: {
         _id: userReceiveInfo._id,
         fullName: userReceiveInfo.fullname,
+        avatar: userReceiveInfo.avatar,
       },
       formPostChecks: formPostChecks.map((fp) => ({
         _id: fp._id,
@@ -196,11 +198,23 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-function removeAccents(str) {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+export function removeAccents(str) {
+  const accentMap = {
+    a: "á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ",
+    d: "đ",
+    e: "é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ",
+    i: "í|ì|ỉ|ĩ|ị",
+    o: "ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ",
+    u: "ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự",
+    y: "ý|ỳ|ỷ|ỹ|ỵ",
+  };
+
+  for (let char in accentMap) {
+    let regex = new RegExp(accentMap[char], "g");
+    str = str.replace(regex, char);
+  }
+
+  return str;
 }
 chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
   try {
@@ -244,8 +258,8 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
 
     const updatedPosts = await Promise.all(
       updatedConversations.map(async (conversation) => {
-        const userReceiveData = await User.findById(conversation.userReceive).select("fullname");
-        const userSendData = await User.findById(conversation.userSend).select("fullname");
+        const userReceiveData = await User.findById(conversation.userReceive).select("fullname avatar");
+        const userSendData = await User.findById(conversation.userSend).select("fullname avatar");
         let fullNameLowerCase;
         if (req.user.id === conversation.userSend) {
           fullNameLowerCase = userReceiveData.fullname.toLowerCase().trim();
@@ -267,7 +281,7 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
         }
       })
     );
-    const filteredUpdatedPosts = updatedPosts.filter((post) => post); 
+    const filteredUpdatedPosts = updatedPosts.filter((post) => post);
 
     res.status(200).json(filteredUpdatedPosts);
   } catch (error) {

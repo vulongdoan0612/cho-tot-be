@@ -10,6 +10,7 @@ const formShema = new mongoose.Schema({
   prioritize: { type: Boolean, default: 0 },
   view: { type: Number, default: 0 },
   userInfo: {
+    avatar: { type: String },
     fullName: { type: String },
     districtValueName: { type: String },
     cityValueName: { type: String },

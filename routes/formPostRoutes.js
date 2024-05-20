@@ -63,7 +63,6 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), che
       wardValue,
       detailAddress,
     } = req.body;
-    console.log(cityValue);
     if (req.files) {
       const postIdRef = ref(storage, `images/post/${userId}/${postId}`);
       const postIdSnapshot = await getDownloadURL(postIdRef).catch(() => null);
@@ -90,6 +89,8 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), che
       const formPost = new FormPostCheck({
         userId: userId,
         userInfo: {
+          avatar: user.avatar,
+
           fullName: user.fullname,
           districtValueName: user.address.district,
           cityValueName: user.address.city,
@@ -164,6 +165,11 @@ formPostCheckRouter.post("/get-post", async (req, res) => {
     if (post === null) {
       return res.status(200).json({ status: "404" });
     }
+    const user = await User.findById(post.userId);
+    console.log(user, post.userInfo);
+    if (user) {
+      post.userInfo.avatar = user.avatar || "images/empty-avatar.jpg";
+    }
     await FormPostCheck.findOneAndUpdate({ postId: postId, censorship: true, hidden: false }, { $inc: { view: 1 } });
 
     const wardValueName = post.post.wardValueName;
@@ -194,7 +200,6 @@ formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async 
       censorship: true,
     });
 
-
     const userPostCheck = await FormPostCheck.find({
       userId,
       hidden: false,
@@ -216,9 +221,7 @@ formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async 
 });
 formPostCheckRouter.get("/get-posts-current", async (req, res) => {
   try {
-    const latestPosts = await FormPostCheck.find({ censorship: true, hidden: false })
-      .sort({ date: -1 }) 
-      .limit(12); 
+    const latestPosts = await FormPostCheck.find({ censorship: true, hidden: false }).sort({ date: -1 }).limit(12);
 
     res.status(200).json({ latestPosts });
   } catch (error) {
@@ -260,6 +263,7 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       brand,
       status,
       post,
+      keySearch
     } = req.query;
     let filter = {
       hidden: false,
@@ -397,6 +401,8 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       }
     }
     if (price !== "undefined") {
+      const match = dateParams[0].match(/(min|max)(\d+)/);
+
       if (price === "un200tr") {
         filter["post.price"] = { $lte: 200000000 };
       } else if (price === "200tr-300tr") {
@@ -431,6 +437,7 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
     const skipCount = (currentPage - 1) * pageSize;
     const totalRecords = await FormPostCheck.countDocuments(filter);
     const posts = await FormPostCheck.find(filter).skip(skipCount).limit(pageSize);
+
     res.status(200).json({ data: posts, status: "SUCCESS", total: totalRecords });
   } catch (error) {
     console.log(error);
@@ -667,11 +674,7 @@ formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
       });
     }
 
-    const updatedPost = await FormPostCheck.findOneAndUpdate(
-      { postId: postId },
-      { $set: { hidden: true } },
-      { new: true } 
-    );
+    const updatedPost = await FormPostCheck.findOneAndUpdate({ postId: postId }, { $set: { hidden: true } }, { new: true });
     const userPosts = await FormPostCheck.find({
       userId: updatedPost.userId,
     });
@@ -701,6 +704,53 @@ formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
       status: "ERROR",
       error: error.message,
     });
+  }
+});
+
+export function removeAccents(str) {
+  const accentMap = {
+    a: "á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ",
+    d: "đ",
+    e: "é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ",
+    i: "í|ì|ỉ|ĩ|ị",
+    o: "ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ",
+    u: "ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự",
+    y: "ý|ỳ|ỷ|ỹ|ỵ",
+  };
+
+  for (let char in accentMap) {
+    let regex = new RegExp(accentMap[char], "g");
+    str = str.replace(regex, char);
+  }
+
+  return str;
+}
+formPostCheckRouter.post("/key-search", async (req, res) => {
+  const { keySearch } = req.query;
+
+  try {
+    const posts = await FormPostCheck.find({
+      hidden: false,
+      censorship: true,
+    });
+
+    let matchingTitles;
+    if (!keySearch) {
+      matchingTitles = posts.map((post) => post.post.title);
+    } else {
+      const searchLowerCase = removeAccents(keySearch.toLowerCase().trim());
+      matchingTitles = posts
+        .map((post) => post.post.title)
+        .filter((title) => {
+          const titleLowerCase = removeAccents(title.toLowerCase());
+          return titleLowerCase.includes(searchLowerCase);
+        });
+    }
+
+    res.status(200).json({ titles: matchingTitles, status: "SUCCESS" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 export default formPostCheckRouter;

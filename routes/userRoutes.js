@@ -7,10 +7,18 @@ import cors from "cors";
 import { WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
+import { deleteObject, getDownloadURL, getStorage, listAll, ref, uploadBytesResumable } from "firebase/storage";
+import { v4 as uuidv4 } from "uuid";
+
+import multer from "multer";
+import { initializeApp } from "firebase/app";
+import config from "../config/firebase.js";
 const userRouter = express.Router();
 userRouter.use(cors());
 const wss = new WebSocketServer({ port: 8084 });
-
+initializeApp(config.firebaseConfig);
+const storage = getStorage();
+const upload = multer({ storage: multer.memoryStorage() });
 userRouter.post("/register", async (req, res) => {
   const { fullname, password, phone } = req.body;
   const currentTime = new Date();
@@ -87,6 +95,87 @@ userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+userRouter.put("/change-avatar", checkAccessToken, upload.single("avatar"), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded", status: "ERROR" });
+    }
+    const avatarDirRef = ref(storage, `avatars/${userId}`);
+    const listResult = await listAll(avatarDirRef);
+
+    const deletePromises = listResult.items.map((fileRef) => deleteObject(fileRef));
+    await Promise.all(deletePromises);
+    const avatarId = uuidv4();
+    const avatarPath = `avatars/${userId}/${avatarId}`;
+    const storageRef = ref(storage, avatarPath);
+    const metadata = {
+      contentType: req.file.mimetype,
+    };
+
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    user.avatar = downloadURL;
+    await user.save();
+
+    res.status(200).json({
+      message: "Avatar updated successfully",
+      status: "SUCCESS",
+      avatar: downloadURL,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+userRouter.put("/change-banner", checkAccessToken, upload.single("banner"), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found", status: "ERROR" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded", status: "ERROR" });
+    }
+    const avatarDirRef = ref(storage, `banners/${userId}`);
+    const listResult = await listAll(avatarDirRef);
+
+    const deletePromises = listResult.items.map((fileRef) => deleteObject(fileRef));
+    await Promise.all(deletePromises);
+    const bannerId = uuidv4();
+    const avatarPath = `banners/${userId}/${bannerId}`;
+    const storageRef = ref(storage, avatarPath);
+    const metadata = {
+      contentType: req.file.mimetype,
+    };
+
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    user.banner = downloadURL;
+    await user.save();
+
+    res.status(200).json({
+      message: "Banner updated successfully",
+      status: "SUCCESS",
+      banner: downloadURL,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
 userRouter.put("/change-password", checkAccessToken, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
@@ -154,7 +243,7 @@ userRouter.post("/get-announce-chat", checkAccessToken, async (req, res) => {
 userRouter.post("/get-detail-profile-user", async (req, res) => {
   try {
     const { userId } = req.body;
-    const user = await User.findById(userId).select("fullname address phone introduction rememberName selled selling sex");
+    const user = await User.findById(userId).select("fullname address phone introduction rememberName selled selling sex avatar banner");
     const userPosts = await FormPostCheck.find({
       userId: userId,
     }).select("post.title post.price post.slug post.image postId date userId censorship hidden dateJoin post.cityValueName");
