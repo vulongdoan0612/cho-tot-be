@@ -4,7 +4,7 @@ export const checkAccessToken = (req, res, next) => {
   // if (req.headers.authorization === undefined || req.cookies.accessToken === undefined) {
   //   return res.status(200).json({ message: "None-Account" });
   // }
-  const accessToken = req.headers.authorization || req.cookies.accessToken;
+  const accessToken = req.headers.authorization;
   if (!accessToken) {
     return res.status(401).json({ message: "Unauthorized" });
   }

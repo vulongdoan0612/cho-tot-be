@@ -166,7 +166,6 @@ formPostCheckRouter.post("/get-post", async (req, res) => {
       return res.status(200).json({ status: "404" });
     }
     const user = await User.findById(post.userId);
-    console.log(user, post.userInfo);
     if (user) {
       post.userInfo.avatar = user.avatar || "images/empty-avatar.jpg";
     }
@@ -263,7 +262,7 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       brand,
       status,
       post,
-      keySearch
+      keySearch,
     } = req.query;
     let filter = {
       hidden: false,
@@ -401,8 +400,11 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       }
     }
     if (price !== "undefined") {
-      const match = dateParams[0].match(/(min|max)(\d+)/);
+      const [lowerPrice, upperPrice] = price.split("-").map((item) => parseInt(item));
+      const match = price.match(/(min|max)(\d+)/);
 
+      // const match = dateParams[0].match(/(min|max)(\d+)/);
+      console.log(match);
       if (price === "un200tr") {
         filter["post.price"] = { $lte: 200000000 };
       } else if (price === "200tr-300tr") {
@@ -423,22 +425,40 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
         filter["post.price"] = { $gte: 1000000000, $lte: 2000000000 };
       } else if (price === "up2t") {
         filter["post.price"] = { $gte: 2000000000 };
-      } else if (match[1] === "max") {
+      } else if (match !== null && match[1] === "max") {
         filter["post.price"] = { $lte: match[2] };
-      } else if (match[1] === "min") {
+      } else if (match !== null && match[1] === "min") {
         filter["post.price"] = { $gte: match[2] };
       } else {
         if (!isNaN(lowerPrice) && !isNaN(upperPrice)) {
           filter["post.price"] = { $gte: lowerPrice, $lte: upperPrice };
         } else {
+          // Xử lý nếu giá trị không hợp lệ
         }
       }
     }
-    const skipCount = (currentPage - 1) * pageSize;
-    const totalRecords = await FormPostCheck.countDocuments(filter);
-    const posts = await FormPostCheck.find(filter).skip(skipCount).limit(pageSize);
+    if (keySearch !== "undefined" && keySearch.trim() !== "") {
+      const searchLowerCase = removeAccents(keySearch.toLowerCase().trim());
 
-    res.status(200).json({ data: posts, status: "SUCCESS", total: totalRecords });
+      // Tìm kiếm các bài viết có tiêu đề chứa phần `keySearch` (không phân biệt chữ hoa chữ thường và không phân biệt dấu)
+      const posts = await FormPostCheck.find(filter);
+
+      const matchingPosts = posts.filter((post) => {
+        const titleLowerCase = removeAccents(post.post.title.toLowerCase());
+        return titleLowerCase.includes(searchLowerCase);
+      });
+
+      const totalRecords = matchingPosts.length;
+      const paginatedPosts = matchingPosts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+      return res.status(200).json({ data: paginatedPosts, status: "SUCCESS", total: totalRecords });
+    } else {
+      const skipCount = (currentPage - 1) * pageSize;
+      const totalRecords = await FormPostCheck.countDocuments(filter);
+      const posts = await FormPostCheck.find(filter).skip(skipCount).limit(pageSize);
+
+      res.status(200).json({ data: posts, status: "SUCCESS", total: totalRecords });
+    }
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
@@ -726,14 +746,182 @@ export function removeAccents(str) {
   return str;
 }
 formPostCheckRouter.post("/key-search", async (req, res) => {
-  const { keySearch } = req.query;
-
+  const { price, form, sit, fuel, numberBox, city, district, date, km, color, country, model, brand, status, post, keySearch } = req.query;
   try {
-    const posts = await FormPostCheck.find({
+    let filter = {
       hidden: false,
       censorship: true,
-    });
+    };
+    if (country !== "undefined") {
+      const dataRender = countriesCar.find((item) => item.value === country);
+      filter["post.country"] = { $eq: dataRender.item };
+    }
+    if (model !== "undefined") {
+      filter["post.model"] = { $eq: model };
+    }
+    if (brand !== "undefined") {
+      filter["post.value"] = { $eq: brand };
+    }
+    if (status !== "undefined") {
+      const dataRender = statusCar.find((item) => item.value === status);
+      filter["post.status"] = { $eq: dataRender.item };
+    }
+    if (post !== "undefined") {
+      const dataRender = postCar.find((item) => item.value === post);
+      filter["post.person"] = { $eq: dataRender.item };
+    }
+    if (city !== "undefined") {
+      filter["post.cityValue"] = { $eq: city };
+    }
+    if (district !== "undefined") {
+      filter["post.districtValue"] = { $eq: district };
+    }
+    if (km !== "undefined") {
+      const kmParams = km.split("-");
+      if (kmParams.length === 1) {
+        const match = kmParams[0].match(/(min|max)(\d+)/);
+        if (match) {
+          if (match[1] === "min") {
+            filter["post.km"] = { $gte: match[2] };
+          } else if (match[1] === "max") {
+            filter["post.km"] = { $lte: match[2] };
+          }
+        }
+      } else if (kmParams.length === 2) {
+        filter["post.km"] = { $lte: kmParams[1], $gte: kmParams[0] };
+      }
+    }
+    if (color !== "undefined") {
+      const dataRender = colorsCar.find((item) => item.value === color);
+      filter["post.color"] = { $eq: dataRender.item };
+    }
+    if (form !== "undefined") {
+      if (form === "sudan") {
+        filter["post.form"] = { $eq: "Sudan" };
+      } else if (form === "suv/cross-over") {
+        filter["post.form"] = { $eq: "SUV/Cross over" };
+      } else if (form === "hatchback") {
+        filter["post.form"] = { $eq: "Hatchback" };
+      } else if (form === "pickup") {
+        filter["post.form"] = { $eq: "Pick-up (bán tải)" };
+      } else if (form === "minivan") {
+        filter["post.form"] = { $eq: "Minivan (MPV)" };
+      } else if (form === "van") {
+        filter["post.form"] = { $eq: "Van" };
+      } else if (form === "couple-2-cua") {
+        filter["post.form"] = { $eq: "Couple 2 cửa" };
+      } else if (form === "mui-tran") {
+        filter["post.form"] = { $eq: "Mui trần" };
+      } else {
+        filter["post.form"] = parseInt(form);
+      }
+    }
+    if (sit !== "undefined") {
+      if (sit === "2") {
+        filter["post.sit"] = { $eq: "2" };
+      } else if (sit === "4") {
+        filter["post.sit"] = { $eq: "4" };
+      } else if (sit === "5") {
+        filter["post.sit"] = { $eq: "5" };
+      } else if (sit === "6") {
+        filter["post.sit"] = { $eq: "6" };
+      } else if (sit === "7") {
+        filter["post.sit"] = { $eq: "7" };
+      } else if (sit === "8") {
+        filter["post.sit"] = { $eq: "8" };
+      } else if (sit === "9") {
+        filter["post.sit"] = { $eq: "9" };
+      } else if (sit === "10") {
+        filter["post.sit"] = { $eq: "10" };
+      } else if (sit === "12") {
+        filter["post.sit"] = { $eq: "12" };
+      } else if (sit === "14") {
+        filter["post.sit"] = { $eq: "14" };
+      } else if (sit === "16") {
+        filter["post.sit"] = { $eq: "16" };
+      } else {
+        filter["post.sit"] = parseInt(sit);
+      }
+    }
+    if (fuel !== "undefined") {
+      if (fuel === "xang") {
+        filter["post.activeButton"] = { $eq: "Xăng" };
+      } else if (fuel === "dau") {
+        filter["post.activeButton"] = { $eq: "Dầu" };
+      } else if (fuel === "hybrid") {
+        filter["post.activeButton"] = { $eq: "Động cơ Hybrid" };
+      } else if (fuel === "dien") {
+        filter["post.activeButton"] = { $eq: "Điện" };
+      } else {
+        filter["post.activeButton"] = parseInt(fuel);
+      }
+    }
+    if (numberBox !== "undefined") {
+      if (numberBox === "tu-dong") {
+        filter["post.numberBox"] = { $eq: "Tự động" };
+      } else if (numberBox === "so-san") {
+        filter["post.numberBox"] = { $eq: "Số sàn" };
+      } else if (numberBox === "ban-tu-dong") {
+        filter["post.numberBox"] = { $eq: "Bán tự động" };
+      } else {
+        filter["post.numberBox"] = parseInt(numberBox);
+      }
+    }
 
+    if (date !== "undefined") {
+      const dateParams = date.split("-");
+      if (dateParams.length === 1) {
+        const match = dateParams[0].match(/(min|max)(\d+)/);
+        if (match) {
+          if (match[1] === "min") {
+            filter["post.dateCar"] = { $gte: match[2] };
+          } else if (match[1] === "max") {
+            filter["post.dateCar"] = { $lte: match[2] };
+          }
+        }
+      } else if (dateParams.length === 2) {
+        filter["post.dateCar"] = { $lte: dateParams[1], $gte: dateParams[0] };
+      }
+    }
+    if (price !== "undefined") {
+      const [lowerPrice, upperPrice] = price.split("-").map((item) => parseInt(item));
+      const match = price.match(/(min|max)(\d+)/);
+
+      // const match = dateParams[0].match(/(min|max)(\d+)/);
+      if (price === "un200tr") {
+        filter["post.price"] = { $lte: 200000000 };
+      } else if (price === "200tr-300tr") {
+        filter["post.price"] = { $gte: 200000000, $lte: 300000000 };
+      } else if (price === "300tr-400tr") {
+        filter["post.price"] = { $gte: 300000000, $lte: 400000000 };
+      } else if (price === "400tr-500tr") {
+        filter["post.price"] = { $gte: 400000000, $lte: 500000000 };
+      } else if (price === "500tr-600tr") {
+        filter["post.price"] = { $gte: 500000000, $lte: 600000000 };
+      } else if (price === "600tr-700tr") {
+        filter["post.price"] = { $gte: 600000000, $lte: 700000000 };
+      } else if (price === "700tr-800tr") {
+        filter["post.price"] = { $gte: 700000000, $lte: 800000000 };
+      } else if (price === "800tr-1t") {
+        filter["post.price"] = { $gte: 800000000, $lte: 1000000000 };
+      } else if (price === "1t-2t") {
+        filter["post.price"] = { $gte: 1000000000, $lte: 2000000000 };
+      } else if (price === "up2t") {
+        filter["post.price"] = { $gte: 2000000000 };
+      } else if (match !== null && match[1] === "max") {
+        filter["post.price"] = { $lte: match[2] };
+      } else if (match !== null && match[1] === "min") {
+        filter["post.price"] = { $gte: match[2] };
+      } else {
+        if (!isNaN(lowerPrice) && !isNaN(upperPrice)) {
+          filter["post.price"] = { $gte: lowerPrice, $lte: upperPrice };
+        } else {
+          // Xử lý nếu giá trị không hợp lệ
+        }
+      }
+    }
+    const posts = await FormPostCheck.find(filter);
+    console.log(posts, keySearch);
     let matchingTitles;
     if (!keySearch) {
       matchingTitles = posts.map((post) => post.post.title);
