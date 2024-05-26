@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import Chat from "../models/chatModel.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
@@ -12,8 +12,7 @@ import { sendAnnouce } from "../middleware/sendAnnounce.js";
 
 const chatRouter = express.Router();
 chatRouter.use(cors());
-const wss = new WebSocketServer({ port: 8085 });
-
+const wss = new WebSocketServer({ port: 8085 ,path:'/ws'});
 function isSameDay(date1, date2) {
   return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 }

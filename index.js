@@ -9,17 +9,18 @@ import { Server } from "http";
 import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
+import { WebSocket, WebSocketServer } from "ws";
 
 dotenv.config();
 
 mongoose
-.connect(process.env.MONGODB_URI)
-.then(() => {
-  console.log("Connected to database");
-})
-.catch((err) => {
-  console.log(err.message);
-});
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("Connected to database");
+  })
+  .catch((err) => {
+    console.log(err.message);
+  });
 
 const app = express();
 
@@ -36,8 +37,8 @@ app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
-app.use("/", chatRouter);
 app.use("/", paymentRouter);
+app.use("/", chatRouter);
 
 const port = 5000;
 
@@ -45,3 +46,4 @@ app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
