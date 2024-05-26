@@ -38,12 +38,35 @@ app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
 app.use("/", paymentRouter);
-app.use("/", chatRouter);
+const server = app.listen(8085, () => {
+  console.log(`Server is running on 8085 ${8085}`);
+});
 
+// Create WebSocket server
+const wss = new WebSocketServer({ server, path: "/ws" });
+
+wss.on("connection", (ws) => {
+  console.log("New client connected");
+
+  ws.on("message", (message) => {
+    console.log("received: %s", message);
+  });
+
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
+});
+app.use(
+  "/",
+  (req, res, next) => {
+    req.wss = wss;
+    next();
+  },
+  chatRouter
+);
 const port = 5000;
 
 app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
