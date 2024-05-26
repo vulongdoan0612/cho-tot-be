@@ -7,7 +7,7 @@ const formShema = new mongoose.Schema({
   userId: { type: String },
   hidden: { type: Boolean },
   currentPage: { type: Number },
-  prioritize: { type: Boolean, default: 0 },
+  prioritize: { type: String, default: null },
   view: { type: Number, default: 0 },
   userInfo: {
     avatar: { type: String },

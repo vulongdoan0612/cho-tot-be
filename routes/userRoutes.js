@@ -68,13 +68,14 @@ userRouter.post("/login", async (req, res) => {
 });
 
 userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
-  const { address, introduction, identifyCard, favouriteList, rememberName, faxNumber, sex, birthdate } = req.body;
+  const { address, introduction, identifyCard, favouriteList, rememberName, faxNumber, sex, birthdate,fullname } = req.body;
 
   try {
     const userId = req.user.id;
 
     const updates = {
       address,
+      fullname,
       introduction,
       rememberName,
       identifyCard,
@@ -150,9 +151,21 @@ userRouter.put("/change-banner", checkAccessToken, upload.single("banner"), asyn
     }
     const avatarDirRef = ref(storage, `banners/${userId}`);
     const listResult = await listAll(avatarDirRef);
+    const handleDeleteObject = async (fileRef) => {
+      try {
+        await deleteObject(fileRef);
+      } catch (error) {
+        if (error.code === "storage/object-not-found") {
+          console.warn(`Object not found: ${fileRef.fullPath}`);
+        } else {
+          throw error; // Rethrow if it's a different error
+        }
+      }
+    };
 
-    const deletePromises = listResult.items.map((fileRef) => deleteObject(fileRef));
+    const deletePromises = listResult.items.map((fileRef) => handleDeleteObject(fileRef));
     await Promise.all(deletePromises);
+
     const bannerId = uuidv4();
     const avatarPath = `banners/${userId}/${bannerId}`;
     const storageRef = ref(storage, avatarPath);

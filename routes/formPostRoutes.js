@@ -90,7 +90,6 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), che
         userId: userId,
         userInfo: {
           avatar: user.avatar,
-
           fullName: user.fullname,
           districtValueName: user.address.district,
           cityValueName: user.address.city,
@@ -153,6 +152,18 @@ formPostCheckRouter.post("/get-post-check", checkAccessToken, async (req, res) =
     const { postId } = req.body;
     const postCheck = await FormPostCheck.findOne({ postId });
     res.status(200).json({ postCheck });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+formPostCheckRouter.post("/get-post-service", checkAccessToken, async (req, res) => {
+  try {
+    const { postId } = req.body;
+    const post = await FormPostCheck.findOne({ postId }).select(
+      "userId userInfo.fullName date post.image post.title post.price prioritize postId"
+    );
+    res.status(200).json({ post });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
@@ -278,14 +289,20 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
     if (brand !== "undefined") {
       filter["post.value"] = { $eq: brand };
     }
+
     if (status !== "undefined") {
       const dataRender = statusCar.find((item) => item.value === status);
-      filter["post.status"] = { $eq: dataRender.item };
+      filter["post.status"] = { $eq: dataRender?.item };
     }
-    if (post !== "undefined") {
-      const dataRender = postCar.find((item) => item.value === post);
-      filter["post.person"] = { $eq: dataRender.item };
+    if (post !== "undefined" && post !== "all") {
+      if (post === "ca-nhan") {
+        filter["post.person"] = { $eq: "Cá nhân" };
+      } else {
+        const dataRender = postCar.find((item) => item.value === post);
+        filter["post.person"] = { $eq: dataRender?.item };
+      }
     }
+
     if (city !== "undefined") {
       filter["post.cityValue"] = { $eq: city };
     }
@@ -443,7 +460,37 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       // Tìm kiếm các bài viết có tiêu đề chứa phần `keySearch` (không phân biệt chữ hoa chữ thường và không phân biệt dấu)
       const posts = await FormPostCheck.find(filter);
 
-      const matchingPosts = posts.filter((post) => {
+      // Thay đổi thông tin userInfo của mỗi bài đăng
+      const updatedPosts = await Promise.all(
+        posts.map(async (post) => {
+          const user = await User.findById(post.userId);
+          if (user) {
+            // Nếu tìm thấy người dùng, thay đổi thông tin userInfo
+            post.userInfo = {
+              avatar: user.avatar,
+              fullName: user.fullname,
+              // Thêm các thông tin khác nếu cần
+            };
+          }
+          return post;
+        })
+      );
+      const sortedPosts = updatedPosts.sort((a, b) => {
+        const prioritizeOrder = ["26.51", "15.71", "14.73", null];
+        const indexA = prioritizeOrder.indexOf(a.prioritize);
+        const indexB = prioritizeOrder.indexOf(b.prioritize);
+
+        if (indexA !== indexB) {
+          return indexA - indexB;
+        }
+
+        if (a.prioritize === null && b.prioritize === null) {
+          return new Date(b.date) - new Date(a.date);
+        }
+
+        return 0;
+      });
+      const matchingPosts = sortedPosts.filter((post) => {
         const titleLowerCase = removeAccents(post.post.title.toLowerCase());
         return titleLowerCase.includes(searchLowerCase);
       });
@@ -453,11 +500,47 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
 
       return res.status(200).json({ data: paginatedPosts, status: "SUCCESS", total: totalRecords });
     } else {
-      const skipCount = (currentPage - 1) * pageSize;
       const totalRecords = await FormPostCheck.countDocuments(filter);
-      const posts = await FormPostCheck.find(filter).skip(skipCount).limit(pageSize);
+      // const posts = await FormPostCheck.find(filter)
+      //   .skip((currentPage - 1) * pageSize)
+      //   .limit(pageSize);
+      const posts = await FormPostCheck.find(filter);
 
-      res.status(200).json({ data: posts, status: "SUCCESS", total: totalRecords });
+      // Thay đổi thông tin userInfo của mỗi bài đăng
+      const updatedPosts = await Promise.all(
+        posts.map(async (post) => {
+          const user = await User.findById(post.userId);
+          if (user) {
+            post.userInfo = {
+              avatar: user.avatar,
+              fullName: user.fullname,
+              selling: user.selling,
+              selled: user.selled,
+
+              // Thêm các thông tin khác nếu cần
+            };
+          }
+          return post;
+        })
+      );
+      const sortedPosts = updatedPosts.sort((a, b) => {
+        const prioritizeOrder = ["26.51", "15.71", "14.73", null];
+        const indexA = prioritizeOrder.indexOf(a.prioritize);
+        const indexB = prioritizeOrder.indexOf(b.prioritize);
+
+        if (indexA !== indexB) {
+          return indexA - indexB;
+        }
+
+        if (a.prioritize === null && b.prioritize === null) {
+          return new Date(b.date) - new Date(a.date);
+        }
+
+        return 0;
+      });
+      const paginatedPosts = sortedPosts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+      res.status(200).json({ data: paginatedPosts, status: "SUCCESS", total: totalRecords });
     }
   } catch (error) {
     console.log(error);
@@ -921,7 +1004,6 @@ formPostCheckRouter.post("/key-search", async (req, res) => {
       }
     }
     const posts = await FormPostCheck.find(filter);
-    console.log(posts, keySearch);
     let matchingTitles;
     if (!keySearch) {
       matchingTitles = posts.map((post) => post.post.title);
