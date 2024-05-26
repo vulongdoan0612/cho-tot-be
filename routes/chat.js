@@ -14,14 +14,6 @@ const chatRouter = express.Router();
 chatRouter.use(cors());
 const wss = new WebSocketServer({ port: 8085 });
 
-wss.on("connection", (ws) => {
-  console.log("New client connected");
-
-  ws.on("close", () => {
-    console.log("Client disconnected");
-  });
-});
-
 function isSameDay(date1, date2) {
   return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 }
@@ -29,6 +21,7 @@ function isSameDay(date1, date2) {
 chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
   try {
     const { text, idRoom } = req.body;
+    console.log(text);
     const userId = req.user.id;
     const chatRoom = await Chat.findOne({ idRoom: idRoom });
 
@@ -278,7 +271,6 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
         const searchLowerCase = removeAccents(search.toLowerCase().trim());
         if (fullNameLowerCase && removeAccents(fullNameLowerCase).includes(searchLowerCase)) {
           const post = posts.find((p) => p.postId === conversation.postId);
-
           return {
             ...post._doc,
             idRoom: conversation.idRoom,
