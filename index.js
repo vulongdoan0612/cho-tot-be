@@ -13,13 +13,13 @@ import paymentRouter from "./routes/payment.js";
 dotenv.config();
 
 mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("Connected to database");
-  })
-  .catch((err) => {
-    console.log(err.message);
-  });
+.connect(process.env.MONGODB_URI)
+.then(() => {
+  console.log("Connected to database");
+})
+.catch((err) => {
+  console.log(err.message);
+});
 
 const app = express();
 
