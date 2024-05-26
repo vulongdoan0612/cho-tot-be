@@ -43,7 +43,7 @@ const server = app.listen(8085, () => {
 });
 
 // Create WebSocket server
-const wss = new WebSocketServer({ port: 8085, path: "/ws" });
+const wss = new WebSocketServer({ port: 80, path: "/ws" });
 
 wss.on("connection", (ws) => {
   console.log("New client connected");
