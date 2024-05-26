@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
-import { WebSocket, WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import Chat from "../models/chatModel.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
