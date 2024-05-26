@@ -17,7 +17,17 @@ const wss = new WebSocketServer({ port: 8085 });
 function isSameDay(date1, date2) {
   return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 }
+wss.on("connection", (ws) => {
+  console.log("New client connected");
 
+  ws.on("message", (message) => {
+    console.log("received: %s", message);
+  });
+
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
+});
 chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
   try {
     const { text, idRoom } = req.body;
