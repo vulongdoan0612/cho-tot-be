@@ -37,24 +37,21 @@ app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
 app.use("/", paymentRouter);
-const server = app.listen(8085, () => {
-  console.log(`Server is running on 8085 ${8085}`);
-});
 
 // Create WebSocket server
-const wss = new WebSocketServer({ port: 80, path: "/ws" });
+// const wss = new WebSocketServer({ port: 80, path: "/ws" });
 
-wss.on("connection", (ws) => {
-  console.log("New client connected");
+// wss.on("connection", (ws) => {
+//   console.log("New client connected");
 
-  ws.on("message", (message) => {
-    console.log("received: %s", message);
-  });
+//   ws.on("message", (message) => {
+//     console.log("received: %s", message);
+//   });
 
-  ws.on("close", () => {
-    console.log("Client disconnected");
-  });
-});
+//   ws.on("close", () => {
+//     console.log("Client disconnected");
+//   });
+// });
 app.use(
   "/",
   (req, res, next) => {
