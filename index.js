@@ -31,15 +31,13 @@ wss8085.on("upgrade", (request, socket, head) => {
   const pathname = request.url;
 
   if (pathname === "/ws") {
-    wss.handleUpgrade(request, socket, head, (ws) => {
+    wss8085.handleUpgrade(request, socket, head, (ws) => {
       ws.on("message", (message) => {
         console.log(`Realtime message received: ${message}`);
         ws.send(`Realtime server received: ${message}`);
       });
       ws.send("Welcome to the Realtime WebSocket server");
     });
-  } else {
-    socket.destroy();
   }
 });
 app.use(express.json());
