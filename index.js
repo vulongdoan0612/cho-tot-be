@@ -28,7 +28,7 @@ app.use(express.json());
 
 const port = 5000;
 const corsOptions = {
-  origin: "http://localhost:3000/",
+  origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };
