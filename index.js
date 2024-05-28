@@ -9,6 +9,7 @@ import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
 import { WebSocket, WebSocketServer } from "ws";
+import http from "http";
 
 dotenv.config();
 
@@ -23,21 +24,12 @@ mongoose
 
 const app = express();
 
+const port8085 = http.createServer(app);
+// Tạo HTTP server từ express app
+
+const wss8085 = new WebSocketServer({ server: port8085 });
+console.log(wss8085);
 app.use(express.json());
-const wss = new WebSocketServer({ port: 443 });
-
-wss.on("connection", (ws) => {
-  console.log("New client connected!");
-
-  ws.on("message", (message) => {
-    console.log(`Received: ${message}`);
-    ws.send(`You said: ${message}`);
-  });
-
-  ws.on("close", () => {
-    console.log("Client disconnected");
-  });
-});
 
 app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
@@ -50,10 +42,12 @@ app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
 app.use("/", paymentRouter);
+// app.use("/", chatRouter);
+
 app.use(
   "/",
   (req, res, next) => {
-    req.wss = wss;
+    req.wss = wss8085;
     next();
   },
   chatRouter
@@ -64,4 +58,7 @@ const port = 5000;
 app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+});
+port8085.listen(8085, () => {
+  console.log("Realtime server is listening on port 8085");
 });
