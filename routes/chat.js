@@ -7,7 +7,8 @@ import Chat from "../models/chatModel.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
 import User from "../models/userModel.js";
 import { webSocketCreateRoom } from "../middleware/createWebSocketChat.js";
-import { sendAnnouce, webSocketChat } from "../index.js";
+import { webSocketChat } from "../middleware/sendWebSocketChat.js";
+import { sendAnnouce } from "../middleware/sendAnnounce.js";
 const wss = new WebSocketServer({ port: 443 });
 
 const chatRouter = express.Router();
