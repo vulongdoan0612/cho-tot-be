@@ -26,7 +26,7 @@ const app = express();
 
 const port8085 = http.createServer(app);
 // Tạo HTTP server từ express app
-const wss8085 = new WebSocketServer({ server: port8085 });
+const wss8085 = new WebSocketServer({ noServer: true });
 port8085.on("upgrade", (request, socket, head) => {
   const pathname = request.url;
   console.log(pathname);
@@ -38,6 +38,8 @@ port8085.on("upgrade", (request, socket, head) => {
       });
       ws.send("Welcome to the Realtime WebSocket server");
     });
+  } else {
+    socket.destroy();
   }
 });
 app.use(express.json());
