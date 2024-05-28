@@ -48,4 +48,6 @@ app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
+app.listen(8085, () => {
+  console.log(`websocket is running on port ${8085}`);
+});
