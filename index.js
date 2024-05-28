@@ -8,6 +8,7 @@ import adminRouter from "./routes/adminCMS.js";
 import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
+import { WebSocket, WebSocketServer } from "ws";
 
 dotenv.config();
 
