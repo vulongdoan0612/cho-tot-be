@@ -9,7 +9,7 @@ import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
 import { WebSocket, WebSocketServer } from "ws";
-import http from "http";
+import http, { createServer } from "http";
 
 dotenv.config();
 
