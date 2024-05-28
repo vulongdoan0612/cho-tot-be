@@ -29,7 +29,7 @@ const port8085 = http.createServer(app);
 const wss8085 = new WebSocketServer({ server: port8085 });
 wss8085.on("upgrade", (request, socket, head) => {
   const pathname = request.url;
-
+  console.log(pathname);
   if (pathname === "/ws") {
     wss8085.handleUpgrade(request, socket, head, (ws) => {
       ws.on("message", (message) => {

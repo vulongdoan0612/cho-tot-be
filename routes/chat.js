@@ -53,26 +53,26 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
     }
     await chatRoom.save();
     // const wss = req.wss;
-    const messageData = { action: "post-message", idRoom: idRoom };
+    const messageData = JSON.stringify({ action: "post-message", idRoom: idRoom });
     const wss = req.wss;
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN && client.url === "/ws") {
-        client.send(JSON.stringify(messageData));
+        client.send(messageData);
       }
     });
 
-    webSocketChat(wss, "post-message", idRoom);
+    // webSocketChat(wss, "post-message", idRoom);
 
     if (userId === chatRoom.userSend) {
       const userPop = await User.findById(chatRoom.userReceive);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce(wss, "annouce", chatRoom.userReceive, "chat");
+      // sendAnnouce(wss, "annouce", chatRoom.userReceive, "chat");
     } else {
       const userPop = await User.findById(chatRoom.userSend);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce(wss, "annouce", chatRoom.userSend, "chat");
+      // sendAnnouce(wss, "annouce", chatRoom.userSend, "chat");
     }
     res.status(200).json(chatRoom);
   } catch (error) {
@@ -201,8 +201,8 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     };
     const wss = req.wss;
 
-    sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
-    sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
+    // sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
+    // sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
 
     res.status(200).json(chatRoom[0]);
   } catch (error) {
