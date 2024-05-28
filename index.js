@@ -24,7 +24,7 @@ mongoose
 
 const app = express();
 
-const port8085 = http.createServer(app);
+const port8085 = createServer(app);
 // Tạo HTTP server từ express app
 const wss8085 = new WebSocketServer({ server: port8085 });
 
