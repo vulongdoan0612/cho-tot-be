@@ -7,7 +7,7 @@ import Chat from "../models/chatModel.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
 import User from "../models/userModel.js";
 import { webSocketCreateRoom } from "../middleware/createWebSocketChat.js";
-import { sendAnnouce, webSocketChat } from "../websocket.js";
+import { sendAnnouce, webSocketChat } from "../index.js";
 
 const chatRouter = express.Router();
 chatRouter.use(cors());
@@ -52,17 +52,17 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
     }
     await chatRoom.save();
 
-    webSocketChat( "post-message", idRoom);
+    webSocketChat("post-message", idRoom);
     if (userId === chatRoom.userSend) {
       const userPop = await User.findById(chatRoom.userReceive);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce( "annouce", chatRoom.userReceive, "chat");
+      sendAnnouce("annouce", chatRoom.userReceive, "chat");
     } else {
       const userPop = await User.findById(chatRoom.userSend);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce( "annouce", chatRoom.userSend, "chat");
+      sendAnnouce("annouce", chatRoom.userSend, "chat");
     }
     res.status(200).json(chatRoom);
   } catch (error) {
@@ -191,8 +191,8 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
       })),
     };
 
-    sendAnnouce( "annouce", chatRoom[0].userReceive, "chat");
-    sendAnnouce( "annouce", chatRoom[0].userSend, "chat");
+    sendAnnouce("annouce", chatRoom[0].userReceive, "chat");
+    sendAnnouce("annouce", chatRoom[0].userSend, "chat");
 
     res.status(200).json(chatRoom[0]);
   } catch (error) {

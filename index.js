@@ -9,8 +9,7 @@ import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
 import http from "http";
-import { WebSocketServer } from "ws";
-import "./websocket.js";
+import { WebSocket, WebSocketServer } from "ws";
 
 dotenv.config();
 
@@ -26,8 +25,46 @@ mongoose
 const app = express();
 
 app.use(express.json());
-const server = http.createServer(app);
 
+const port = 5000;
+
+const server = http.createServer(app); // Tạo HTTP server từ express app
+
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+const wss = new WebSocketServer({ port: 8085, path: "/ws" });
+
+wss.on("connection", (ws) => {
+  console.log("New WebSocket client connected");
+
+  ws.on("message", (message) => {
+    console.log("Received:", message);
+    // Xử lý message từ client
+  });
+
+  ws.on("close", () => {
+    console.log("WebSocket client disconnected");
+  });
+});
+
+export const webSocketChat = (action, idRoom) => {
+  const message = JSON.stringify({ action, idRoom });
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+};
+export const sendAnnouce = (action, userId, announce) => {
+  const message = JSON.stringify({ action, userId, announce });
+
+  wss.clients.forEach(function each(client) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+};
 app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
   origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
@@ -42,12 +79,4 @@ app.use("/", paymentRouter);
 
 app.use("/", chatRouter);
 
-const port = 5000;
-
 app.use(cors(corsOptions));
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-app.listen(8085, () => {
-  console.log(`websocket is running on port ${8085}`);
-});
