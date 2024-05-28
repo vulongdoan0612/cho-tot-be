@@ -27,7 +27,12 @@ const app = express();
 app.use(express.json());
 
 const port = 5000;
-
+const corsOptions = {
+  origin: "http://localhost:3000/",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+};
+app.use(cors(corsOptions));
 const wss = new WebSocketServer({ port: 443, path: "/ws" });
 
 wss.on("connection", (ws) => {
@@ -61,11 +66,7 @@ export const sendAnnouce = (action, userId, announce) => {
   });
 };
 app.use(express.urlencoded({ extended: true }));
-const corsOptions = {
-  origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-};
+
 app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
@@ -74,7 +75,6 @@ app.use("/", paymentRouter);
 
 app.use("/", chatRouter);
 
-app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
