@@ -24,6 +24,20 @@ mongoose
 const app = express();
 
 app.use(express.json());
+const wss = new WebSocketServer({ port: 443 });
+
+wss.on("connection", (ws) => {
+  console.log("New client connected!");
+
+  ws.on("message", (message) => {
+    console.log(`Received: ${message}`);
+    ws.send(`You said: ${message}`);
+  });
+
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
+});
 
 app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
@@ -36,8 +50,14 @@ app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
 app.use("/", paymentRouter);
-
-app.use("/", chatRouter);
+app.use(
+  "/",
+  (req, res, next) => {
+    req.wss = wss;
+    next();
+  },
+  chatRouter
+);
 
 const port = 5000;
 
@@ -45,5 +65,3 @@ app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-

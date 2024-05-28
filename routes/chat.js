@@ -9,24 +9,12 @@ import User from "../models/userModel.js";
 import { webSocketCreateRoom } from "../middleware/createWebSocketChat.js";
 import { webSocketChat } from "../middleware/sendWebSocketChat.js";
 import { sendAnnouce } from "../middleware/sendAnnounce.js";
-const wss = new WebSocketServer({ port: 443 });
 
 const chatRouter = express.Router();
 chatRouter.use(cors());
 function isSameDay(date1, date2) {
   return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 }
-wss.on("connection", (ws) => {
-  console.log("New WebSocket client connected");
-
-  ws.on("message", (message) => {
-    console.log("Received:", message);
-  });
-
-  ws.on("close", () => {
-    console.log("WebSocket client disconnected");
-  });
-});
 
 chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
   try {
@@ -64,6 +52,7 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
       chatRoom.userSendPop = true;
     }
     await chatRoom.save();
+    const wss = req.wss;
 
     webSocketChat(wss, "post-message", idRoom);
     if (userId === chatRoom.userSend) {
@@ -202,6 +191,7 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
         postId: fp.postId,
       })),
     };
+    const wss = req.wss;
 
     sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
     sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
