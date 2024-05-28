@@ -27,7 +27,11 @@ const app = express();
 app.use(express.json());
 
 const port = 5000;
-
+const corsOptions = {
+  origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+};
 app.use(function (req, res, next) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
@@ -35,7 +39,7 @@ app.use(function (req, res, next) {
   res.setHeader("Access-Control-Allow-Credentials", true);
   next();
 });
-app.use(cors);
+// app.use(cors(corsOptions));
 const wss = new WebSocketServer({ port: 443, path: "/ws" });
 
 wss.on("connection", (ws) => {
