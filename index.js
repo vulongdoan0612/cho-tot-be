@@ -28,12 +28,7 @@ app.use(express.json());
 
 const port = 5000;
 
-const server = http.createServer(app); // Tạo HTTP server từ express app
-
-server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-const wss = new WebSocketServer({ port: 8085, path: "/ws" });
+const wss = new WebSocketServer({ port: 443, path: "/ws" });
 
 wss.on("connection", (ws) => {
   console.log("New WebSocket client connected");
@@ -80,3 +75,6 @@ app.use("/", paymentRouter);
 app.use("/", chatRouter);
 
 app.use(cors(corsOptions));
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
