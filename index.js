@@ -8,8 +8,6 @@ import adminRouter from "./routes/adminCMS.js";
 import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
-import http from "http";
-import { WebSocket, WebSocketServer } from "ws";
 
 dotenv.config();
 
@@ -26,20 +24,12 @@ const app = express();
 
 app.use(express.json());
 
-const port = 5000;
+app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
   origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };
-app.use(function (req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Credentials", true);
-  next();
-});
-// app.use(cors(corsOptions));
 const wss = new WebSocketServer({ port: 443, path: "/ws" });
 
 wss.on("connection", (ws) => {
@@ -72,8 +62,6 @@ export const sendAnnouce = (action, userId, announce) => {
     }
   });
 };
-app.use(express.urlencoded({ extended: true }));
-
 app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
@@ -82,6 +70,9 @@ app.use("/", paymentRouter);
 
 app.use("/", chatRouter);
 
+const port = 5000;
+
+app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
