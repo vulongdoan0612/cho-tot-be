@@ -45,7 +45,7 @@ app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-const wss = new WebSocketServer({ port: 443, path: "/ws" });
+const wss = new WebSocketServer({ port: 443 });
 
 wss.on("connection", (ws) => {
   console.log("New WebSocket client connected");
