@@ -70,6 +70,6 @@ app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-port8085.listen(8085, () => {
-  console.log("Realtime server is listening on port 8085");
-});
+// port8085.listen(8085, () => {
+//   console.log("Realtime server is listening on port 8085");
+// });
