@@ -8,7 +8,6 @@ import adminRouter from "./routes/adminCMS.js";
 import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
-import { WebSocket, WebSocketServer } from "ws";
 
 dotenv.config();
 
@@ -26,43 +25,10 @@ const app = express();
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-app.use(
-  cors({
-    origin: "https://cho-tot-be.onrender.com/",
-  })
-);
-app.options("*", cors());
-const wss = new WebSocketServer({ port: 443, path: "/ws" });
-
-wss.on("connection", (ws) => {
-  console.log("New WebSocket client connected");
-
-  ws.on("message", (message) => {
-    console.log("Received:", message);
-    // Xử lý message từ client
-  });
-
-  ws.on("close", () => {
-    console.log("WebSocket client disconnected");
-  });
-});
-
-export const webSocketChat = (action, idRoom) => {
-  const message = JSON.stringify({ action, idRoom });
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
-};
-export const sendAnnouce = (action, userId, announce) => {
-  const message = JSON.stringify({ action, userId, announce });
-
-  wss.clients.forEach(function each(client) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
+const corsOptions = {
+  origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
 };
 app.use("/", userRouter);
 app.use("/", formPostRouter);
@@ -72,8 +38,11 @@ app.use("/", paymentRouter);
 
 app.use("/", chatRouter);
 
+
+
 const port = 5000;
 
+app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
