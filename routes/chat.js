@@ -7,15 +7,13 @@ import Chat from "../models/chatModel.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
 import User from "../models/userModel.js";
 import { webSocketCreateRoom } from "../middleware/createWebSocketChat.js";
-import { webSocketChat } from "../middleware/sendWebSocketChat.js";
-import { sendAnnouce } from "../middleware/sendAnnounce.js";
+import { sendAnnouce, webSocketChat } from "../index.js";
 
 const chatRouter = express.Router();
 chatRouter.use(cors());
 function isSameDay(date1, date2) {
   return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 }
-const wss = new WebSocketServer({ port: 443 });
 
 chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
   try {
@@ -54,17 +52,17 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
     }
     await chatRoom.save();
 
-    webSocketChat(wss, "post-message", idRoom);
+    webSocketChat("post-message", idRoom);
     if (userId === chatRoom.userSend) {
       const userPop = await User.findById(chatRoom.userReceive);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce(wss, "annouce", chatRoom.userReceive, "chat");
+      sendAnnouce("annouce", chatRoom.userReceive, "chat");
     } else {
       const userPop = await User.findById(chatRoom.userSend);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce(wss, "annouce", chatRoom.userSend, "chat");
+      sendAnnouce("annouce", chatRoom.userSend, "chat");
     }
     res.status(200).json(chatRoom);
   } catch (error) {
@@ -90,7 +88,7 @@ chatRouter.post("/create-room", checkAccessToken, async (req, res) => {
     await chatRoom.save();
     const wss = req.wss;
 
-    webSocketCreateRoom(wss, "create-room", formPostCheck.userId, userId);
+    webSocketCreateRoom("create-room", formPostCheck.userId, userId);
 
     res.status(200).json(chatRoom);
   } catch (error) {
@@ -193,8 +191,8 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
       })),
     };
 
-    sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
-    sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
+    sendAnnouce("annouce", chatRoom[0].userReceive, "chat");
+    sendAnnouce("annouce", chatRoom[0].userSend, "chat");
 
     res.status(200).json(chatRoom[0]);
   } catch (error) {
