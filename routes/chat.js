@@ -53,15 +53,15 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
     }
     await chatRoom.save();
     // const wss = req.wss;
-    const messageData = JSON.stringify({ action: "post-message", idRoom: idRoom });
     const wss = req.wss;
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN && client.url === "/ws") {
-        client.send(messageData);
-      }
-    });
+    // wss.clients.forEach((client) => {
+    //   console.log(client.url);
+    //   if (client.readyState === WebSocket.OPEN) {
+    //     client.send(messageData);
+    //   }
+    // });
 
-    // webSocketChat(wss, "post-message", idRoom);
+    webSocketChat(wss, "post-message", idRoom);
 
     if (userId === chatRoom.userSend) {
       const userPop = await User.findById(chatRoom.userReceive);

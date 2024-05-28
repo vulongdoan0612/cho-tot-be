@@ -26,22 +26,8 @@ const app = express();
 
 const port8085 = http.createServer(app);
 // Tạo HTTP server từ express app
-const wss8085 = new WebSocketServer({ noServer: true });
-port8085.on("upgrade", (request, socket, head) => {
-  const pathname = request.url;
-  console.log(pathname);
-  if (pathname === "/ws") {
-    wss8085.handleUpgrade(request, socket, head, (ws) => {
-      ws.on("message", (message) => {
-        console.log(`Realtime message received: ${message}`);
-        ws.send(`Realtime server received: ${message}`);
-      });
-      ws.send("Welcome to the Realtime WebSocket server");
-    });
-  } else {
-    socket.destroy();
-  }
-});
+const wss8085 = new WebSocketServer({ server: port8085 });
+
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
@@ -72,6 +58,6 @@ app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-// port8085.listen(8085, () => {
-//   console.log("Realtime server is listening on port 8085");
-// });
+port8085.listen(8085, () => {
+  console.log("Realtime server is listening on port 8085");
+});
