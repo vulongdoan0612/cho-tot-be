@@ -28,8 +28,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
   origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
   credentials: true,
+  allowedHeaders: ["Content-type"],
 };
 // const wss = new WebSocketServer({ port: 443, path: "/ws" });
 
