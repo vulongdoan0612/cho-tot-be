@@ -27,7 +27,7 @@ const app = express();
 const port8085 = http.createServer(app);
 // Tạo HTTP server từ express app
 
-const wss8085 = new WebSocketServer({ server: port8085 });
+const wss8085 = new WebSocketServer({ server: port8085,path:'/ws' });
 console.log(wss8085);
 app.use(express.json());
 
