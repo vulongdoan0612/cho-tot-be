@@ -8,6 +8,9 @@ import adminRouter from "./routes/adminCMS.js";
 import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
+import http from "http";
+import { WebSocketServer } from "ws";
+import "./websocket.js";
 
 dotenv.config();
 
@@ -23,6 +26,7 @@ mongoose
 const app = express();
 
 app.use(express.json());
+const server = http.createServer(app);
 
 app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
@@ -38,11 +42,10 @@ app.use("/", paymentRouter);
 
 app.use("/", chatRouter);
 
-
-
 const port = 5000;
 
 app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
