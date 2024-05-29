@@ -26,24 +26,8 @@ const app = express();
 
 const websocket = http.createServer(app);
 
-const wss8085 = new WebSocketServer({ server: websocket });
-websocket.listen(443, () => {
-  console.log("Realtime server is listening on port 8080");
-});
+const wss = new WebSocketServer({ server: websocket });
 
-// wss8085.on("connection", (ws, request) => {
-//   ws.on("message", (message) => {
-//     console.log(`Received message: ${message}`);
-//     wss8085.clients.forEach((client) => {
-//       console.log(message);
-//       if (client.readyState === WebSocket.OPEN) {
-//         client.send(message);
-//       }
-//     });
-//   });
-
-//   ws.send("Welcome to the WebSocket server!");
-// });
 
 app.use(express.json());
 
@@ -57,19 +41,23 @@ app.use("/", paymentRouter);
 app.use(
   "/",
   (req, res, next) => {
-    req.wss = wss8085;
+    req.wss = wss;
     next();
   },
   chatRouter
 );
 
 const port = 5000;
+
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
-// app.use(cors(corsOptions));
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+});
+websocket.listen(443, () => {
+  console.log("Realtime server is listening on port 8080");
 });
