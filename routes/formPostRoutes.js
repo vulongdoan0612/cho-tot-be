@@ -16,8 +16,6 @@ import User from "../models/userModel.js";
 import { colorsCar, countriesCar, postCar, statusCar } from "../mock/_mock.js";
 import { viewPost } from "../middleware/viewPost.js";
 
-const wss = new WebSocketServer({ port: 8083 });
-
 initializeApp(config.firebaseConfig);
 const storage = getStorage();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -135,6 +133,8 @@ formPostCheckRouter.post("/post-form-sell-check", upload.array("image", 20), che
       });
 
       await formPost.save();
+      const wss = req.wss;
+
       webSocketMessage(wss, "post-form", postId);
 
       res.status(201).json({
@@ -194,6 +194,8 @@ formPostCheckRouter.post("/get-post", async (req, res) => {
         },
       },
     ]);
+    const wss = req.wss;
+
     viewPost(wss, "update-view-post", post.userId, postId);
 
     res.status(200).json({ post, relatedPosts: relatedPosts });
@@ -749,6 +751,8 @@ formPostCheckRouter.put("/edit-post-form-sell-check", upload.array("image", 20),
         });
       }
       deleteNonUuidImages(userId, postId, images);
+      const wss = req.wss;
+
       webSocketMessage(wss, "post-form-edit", postId);
 
       res.status(200).json({

@@ -28,16 +28,35 @@ const websocket = http.createServer(app);
 
 const wss = new WebSocketServer({ server: websocket });
 
-
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-app.use("/", userRouter);
-app.use("/", formPostRouter);
-app.use("/", adminRouter);
+app.use(
+  "/",
+  (req, res, next) => {
+    req.wss = wss;
+    next();
+  },
+  userRouter
+);
 app.use("/", favPostRouter);
 app.use("/", paymentRouter);
-
+app.use(
+  "/",
+  (req, res, next) => {
+    req.wss = wss;
+    next();
+  },
+  formPostRouter
+);
+app.use(
+  "/",
+  (req, res, next) => {
+    req.wss = wss;
+    next();
+  },
+  adminRouter
+);
 app.use(
   "/",
   (req, res, next) => {

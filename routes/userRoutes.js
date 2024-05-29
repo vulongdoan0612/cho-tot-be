@@ -15,7 +15,6 @@ import { initializeApp } from "firebase/app";
 import config from "../config/firebase.js";
 const userRouter = express.Router();
 userRouter.use(cors());
-const wss = new WebSocketServer({ port: 8084 });
 initializeApp(config.firebaseConfig);
 const storage = getStorage();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,6 +34,8 @@ userRouter.post("/register", async (req, res) => {
     const user = new User({ fullname, password: hashedPassword, phone });
     user.dateJoin = currentTime;
     await user.save();
+    const wss = req.wss;
+
     webSocketMessage(wss, "new-account", fullname);
     res.status(201).json({
       message: "Tài khoản được đăng ký thành công.",
@@ -68,7 +69,7 @@ userRouter.post("/login", async (req, res) => {
 });
 
 userRouter.put("/change-profile", checkAccessToken, async (req, res) => {
-  const { address, introduction, identifyCard, favouriteList, rememberName, faxNumber, sex, birthdate,fullname } = req.body;
+  const { address, introduction, identifyCard, favouriteList, rememberName, faxNumber, sex, birthdate, fullname } = req.body;
 
   try {
     const userId = req.user.id;
