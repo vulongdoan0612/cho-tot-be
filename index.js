@@ -26,7 +26,7 @@ const app = express();
 
 const port8085 = http.createServer(app);
 // Tạo HTTP server từ express app
-const wss8085 = new WebSocketServer({ server: port8085 });
+const wss8085 = new WebSocketServer({ server: port8085, path: "/chat" });
 port8085.on("upgrade", (request, socket, head) => {
   const pathname = request.url;
   if (pathname === "/chat") {
