@@ -26,18 +26,21 @@ const app = express();
 
 const port8085 = http.createServer(app);
 
-const wss8085 = new WebSocketServer({ noServer: true, path: "/chat" });
-
-port8085.on("upgrade", (request, socket, head) => {
-  const pathname = request.url;
-  if (pathname === "/chat") {
-    wss8085.handleUpgrade(request, socket, head, (ws) => {
-      wss8085.emit("connection", ws, request);
-    });
-  } else {
-    socket.destroy();
-  }
+const wss8085 = new WebSocketServer({ server: port8085 });
+port8085.listen(443, () => {
+  console.log("Realtime server is listening on port 8080");
 });
+
+// port8085.on("upgrade", (request, socket, head) => {
+//   const pathname = request.url;
+//   if (pathname === "/chat") {
+//     wss8085.handleUpgrade(request, socket, head, (ws) => {
+//       wss8085.emit("connection", ws, request);
+//     });
+//   } else {
+//     socket.destroy();
+//   }
+// });
 
 wss8085.on("connection", (ws, request) => {
   ws.on("message", (message) => {
@@ -81,7 +84,4 @@ app.use((req, res, next) => {
 // app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-});
-port8085.listen(8080, () => {
-  console.log("Realtime server is listening on port 8080");
 });
