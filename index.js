@@ -25,8 +25,9 @@ mongoose
 const app = express();
 
 const port8085 = http.createServer(app);
-// Tạo HTTP server từ express app
-const wss8085 = new WebSocketServer({ server: port8085, path: "/chat" });
+
+const wss8085 = new WebSocketServer({ noServer: true, path: "/chat" });
+
 port8085.on("upgrade", (request, socket, head) => {
   const pathname = request.url;
   if (pathname === "/chat") {
@@ -37,6 +38,7 @@ port8085.on("upgrade", (request, socket, head) => {
     socket.destroy();
   }
 });
+
 wss8085.on("connection", (ws, request) => {
   ws.on("message", (message) => {
     console.log(`Received message: ${message}`);
@@ -51,20 +53,15 @@ wss8085.on("connection", (ws, request) => {
 
   ws.send("Welcome to the WebSocket server!");
 });
+
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-// const corsOptions = {
-//   origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
-//   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-//   credentials: true,
-// };
 app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
 app.use("/", favPostRouter);
 app.use("/", paymentRouter);
-// app.use("/", chatRouter);
 
 app.use(
   "/",
