@@ -54,11 +54,11 @@ wss8085.on("connection", (ws, request) => {
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-const corsOptions = {
-  origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-};
+// const corsOptions = {
+//   origin: "https://cho-tot-fresher-git-testuseeff-davids-projects-32d42e4c.vercel.app/",
+//   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+//   credentials: true,
+// };
 app.use("/", userRouter);
 app.use("/", formPostRouter);
 app.use("/", adminRouter);
@@ -76,8 +76,12 @@ app.use(
 );
 
 const port = 5000;
-
-app.use(cors(corsOptions));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+// app.use(cors(corsOptions));
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
