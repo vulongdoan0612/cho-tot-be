@@ -26,8 +26,31 @@ const app = express();
 
 const port8085 = http.createServer(app);
 // Tạo HTTP server từ express app
-const wss8085 = new WebSocketServer({ server: port8085 });
+const wss8085 = new WebSocketServer({ noServer: true });
+port8085.on("upgrade", (request, socket, head) => {
+  const pathname = request.url;
 
+  if (pathname === "/chat") {
+    wss8085.handleUpgrade(request, socket, head, (ws) => {
+      wss8085.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+wss8085.on("connection", (ws, request) => {
+  ws.on("message", (message) => {
+    console.log(`Received message: ${message}`);
+    // Broadcast the message to all clients
+    wss8085.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
+
+  ws.send("Welcome to the WebSocket server!");
+});
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
