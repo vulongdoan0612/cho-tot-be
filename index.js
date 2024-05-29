@@ -27,21 +27,7 @@ const app = express();
 const port8085 = createServer(app);
 // Tạo HTTP server từ express app
 const wss8085 = new WebSocketServer({ server: port8085 });
-wss8085.on("connection", function (ws) {
-  const id = setInterval(function () {
-    ws.send(JSON.stringify(process.memoryUsage()), function () {
-      //
-      // Ignoring errors.
-      //
-    });
-  }, 100);
-  console.log("started client interval");
 
-  ws.on("close", function () {
-    console.log("stopping client interval");
-    clearInterval(id);
-  });
-});
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
