@@ -166,7 +166,7 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     await chatRoom[0].save();
     const allChatRooms = await Chat.find({ userReceive: req.user.id });
     const allPopsFalse = allChatRooms.every((room) => room.userReceivePop === false);
-
+    console.log(allPopsFalse);
     if (allPopsFalse) {
       const userPop = await User.findById(req.user.id);
       userPop.announceChat = false;
@@ -193,8 +193,8 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     };
     const wss = req.wss;
 
-    // sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
-    // sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
+    sendAnnouce(wss, "annouce", chatRoom[0].userReceive, "chat");
+    sendAnnouce(wss, "annouce", chatRoom[0].userSend, "chat");
 
     res.status(200).json(chatRoom[0]);
   } catch (error) {
