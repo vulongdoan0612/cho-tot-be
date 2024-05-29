@@ -9,7 +9,7 @@ import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
 import { WebSocket, WebSocketServer } from "ws";
-import http, { createServer } from "http";
+import http from "http";
 
 dotenv.config();
 
@@ -24,7 +24,7 @@ mongoose
 
 const app = express();
 
-const port8085 = createServer(app);
+const port8085 = http.createServer(app);
 // Tạo HTTP server từ express app
 const wss8085 = new WebSocketServer({ server: port8085 });
 
