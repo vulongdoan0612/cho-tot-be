@@ -29,7 +29,7 @@ const port8085 = http.createServer(app);
 const wss8085 = new WebSocketServer({ noServer: true });
 port8085.on("upgrade", (request, socket, head) => {
   const pathname = request.url;
-
+  console.log(request);
   if (pathname === "/chat") {
     wss8085.handleUpgrade(request, socket, head, (ws) => {
       wss8085.emit("connection", ws, request);
