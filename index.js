@@ -24,38 +24,26 @@ mongoose
 
 const app = express();
 
-const port8085 = http.createServer(app);
+const websocket = http.createServer(app);
 
-const wss8085 = new WebSocketServer({ server: port8085 });
-port8085.listen(443, () => {
+const wss8085 = new WebSocketServer({ server: websocket });
+websocket.listen(443, () => {
   console.log("Realtime server is listening on port 8080");
 });
 
-// port8085.on("upgrade", (request, socket, head) => {
-//   const pathname = request.url;
-//   if (pathname === "/chat") {
-//     wss8085.handleUpgrade(request, socket, head, (ws) => {
-//       wss8085.emit("connection", ws, request);
+// wss8085.on("connection", (ws, request) => {
+//   ws.on("message", (message) => {
+//     console.log(`Received message: ${message}`);
+//     wss8085.clients.forEach((client) => {
+//       console.log(message);
+//       if (client.readyState === WebSocket.OPEN) {
+//         client.send(message);
+//       }
 //     });
-//   } else {
-//     socket.destroy();
-//   }
+//   });
+
+//   ws.send("Welcome to the WebSocket server!");
 // });
-
-wss8085.on("connection", (ws, request) => {
-  ws.on("message", (message) => {
-    console.log(`Received message: ${message}`);
-    // Broadcast the message to all clients
-    wss8085.clients.forEach((client) => {
-      console.log(message);
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  });
-
-  ws.send("Welcome to the WebSocket server!");
-});
 
 app.use(express.json());
 
