@@ -4,24 +4,23 @@ import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
 import cors from "cors";
-import { WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
 import { deleteObject, getDownloadURL, getStorage, listAll, ref, uploadBytesResumable } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
-
 import multer from "multer";
 import { initializeApp } from "firebase/app";
 import config from "../config/firebase.js";
+
 const userRouter = express.Router();
 userRouter.use(cors());
 initializeApp(config.firebaseConfig);
 const storage = getStorage();
 const upload = multer({ storage: multer.memoryStorage() });
+
 userRouter.post("/register", async (req, res) => {
   const { fullname, password, phone } = req.body;
   const currentTime = new Date();
-
   try {
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
@@ -159,7 +158,7 @@ userRouter.put("/change-banner", checkAccessToken, upload.single("banner"), asyn
         if (error.code === "storage/object-not-found") {
           console.warn(`Object not found: ${fileRef.fullPath}`);
         } else {
-          throw error; // Rethrow if it's a different error
+          throw error; 
         }
       }
     };

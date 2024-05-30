@@ -1,14 +1,13 @@
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import cors from "cors";
 import userRouter from "./routes/userRoutes.js";
 import formPostRouter from "./routes/formPostRoutes.js";
 import adminRouter from "./routes/adminCMS.js";
 import favPostRouter from "./routes/favPost.js";
 import chatRouter from "./routes/chat.js";
 import paymentRouter from "./routes/payment.js";
-import { WebSocket, WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
 import http from "http";
 
 dotenv.config();

@@ -6,7 +6,6 @@ import bcrypt from "bcrypt";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
 import jwt from "jsonwebtoken";
 import FormPostCheck from "../models/formPostCheckModel.js";
-import { WebSocket, WebSocketServer } from "ws";
 import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import FavPost from "../models/favPost.js";
 

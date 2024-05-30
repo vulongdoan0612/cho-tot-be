@@ -1,8 +1,6 @@
 import express from "express";
 import cors from "cors";
 import { checkAccessToken } from "../middleware/authMiddleware.js";
-import { WebSocket, WebSocketServer } from "ws";
-import { webSocketMessage } from "../middleware/sendWebSocketMessage.js";
 import Chat from "../models/chatModel.js";
 import FormPostCheck from "../models/formPostCheckModel.js";
 import User from "../models/userModel.js";
@@ -15,8 +13,7 @@ chatRouter.use(cors());
 function isSameDay(date1, date2) {
   return date1.getDate() === date2.getDate() && date1.getMonth() === date2.getMonth() && date1.getFullYear() === date2.getFullYear();
 }
-// const wss = new WebSocketServer({ port: 8085 });
-// console.log(wss);
+
 chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
   try {
     const { text, idRoom } = req.body;
@@ -166,7 +163,6 @@ chatRouter.post("/get-conversation", checkAccessToken, async (req, res) => {
     await chatRoom[0].save();
     const allChatRooms = await Chat.find({ userReceive: req.user.id });
     const allPopsFalse = allChatRooms.every((room) => room.userReceivePop === false);
-    console.log(allPopsFalse);
     if (allPopsFalse) {
       const userPop = await User.findById(req.user.id);
       userPop.announceChat = false;

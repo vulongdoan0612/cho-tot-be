@@ -2,8 +2,8 @@
 const convertToSlug = (text) => {
   return text
     .toLowerCase()
-    .replace(/ /g, "-") // Thay thế khoảng trắng bằng dấu gạch ngang
-    .normalize("NFD") // Chuẩn hóa Unicode
-    .replace(/[\u0300-\u036f]/g, ""); // Loại bỏ dấu
+    .replace(/ /g, "-")
+    .normalize("NFD") 
+    .replace(/[\u0300-\u036f]/g, ""); 
 }
 export default convertToSlug

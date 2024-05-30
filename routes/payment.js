@@ -30,15 +30,15 @@ paymentRouter.post("/payment-info", checkAccessToken, async (req, res) => {
     await newPayment.save();
     await FormPostCheck.findOneAndUpdate(
       {
-        postId: postId, // Điều kiện tìm kiếm postId
-        censorship: true, // censorship phải là true
-        hidden: false, // hidden phải là false
+        postId: postId,
+        censorship: true, 
+        hidden: false, 
       },
       {
-        prioritize: amount, // Dữ liệu cần cập nhật
+        prioritize: amount,
       },
       {
-        new: true, // Tùy chọn để trả về bản ghi sau khi được cập nhật
+        new: true,
       }
     );
     res.status(200).json({ status: "SUCCESS", newPayment: newPayment });
