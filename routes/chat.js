@@ -285,7 +285,7 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
     );
     const filteredUpdatedPosts = updatedPosts.filter((post) => post);
 
-    res.status(200).json(filteredUpdatedPosts);
+    res.status(200).json({ filteredUpdatedPosts: filteredUpdatedPosts });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
