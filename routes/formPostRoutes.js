@@ -207,9 +207,42 @@ formPostCheckRouter.post("/get-post", async (req, res) => {
 formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const allPostCheck = await FormPostCheck.find({
+    const posts = await FormPostCheck.find({
       hidden: false,
       censorship: true,
+    });
+
+    // Thay đổi thông tin userInfo của mỗi bài đăng
+    const updatedPosts = await Promise.all(
+      posts.map(async (post) => {
+        const user = await User.findById(post.userId);
+        if (user) {
+          post.userInfo = {
+            avatar: user.avatar,
+            fullName: user.fullname,
+            selling: user.selling,
+            selled: user.selled,
+
+            // Thêm các thông tin khác nếu cần
+          };
+        }
+        return post;
+      })
+    );
+    const sortedPosts = updatedPosts.sort((a, b) => {
+      const prioritizeOrder = ["26.51", "15.71", "14.73", null];
+      const indexA = prioritizeOrder.indexOf(a.prioritize);
+      const indexB = prioritizeOrder.indexOf(b.prioritize);
+
+      if (indexA !== indexB) {
+        return indexA - indexB;
+      }
+
+      if (a.prioritize === null && b.prioritize === null) {
+        return new Date(b.date) - new Date(a.date);
+      }
+
+      return 0;
     });
 
     const userPostCheck = await FormPostCheck.find({
@@ -219,13 +252,14 @@ formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async 
     });
 
     userPostCheck.forEach((post) => {
-      const index = allPostCheck.findIndex((p) => p._id.toString() === post._id.toString());
+      const index = sortedPosts.findIndex((p) => p.postId.toString() === post.postId.toString());
+      console.log(index);
       if (index !== -1) {
         post.currentPage = Math.floor(index / 7) + 1;
       }
     });
 
-    res.status(200).json({ data: userPostCheck, status: "SUCCESS", totalPage: allPostCheck.length / 7 });
+    res.status(200).json({ data: userPostCheck, status: "SUCCESS", totalPage: sortedPosts.length / 7 });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
