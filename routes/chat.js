@@ -88,8 +88,8 @@ chatRouter.post("/create-room", checkAccessToken, async (req, res) => {
       chatRoom.lastTextToNow = currentTime;
     }
     await chatRoom.save();
-
-    webSocketCreateRoom("create-room", formPostCheck.userId, userId);
+    const wss = req.wss;
+    webSocketCreateRoom(wss, "create-room", formPostCheck.userId, userId);
 
     res.status(200).json(chatRoom);
   } catch (error) {
