@@ -209,7 +209,6 @@ formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async 
       censorship: true,
     });
 
-    // Thay đổi thông tin userInfo của mỗi bài đăng
     const updatedPosts = await Promise.all(
       posts.map(async (post) => {
         const user = await User.findById(post.userId);
@@ -219,8 +218,6 @@ formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async 
             fullName: user.fullname,
             selling: user.selling,
             selled: user.selled,
-
-            // Thêm các thông tin khác nếu cần
           };
         }
         return post;
@@ -1041,10 +1038,11 @@ formPostCheckRouter.post("/key-search", async (req, res) => {
     const posts = await FormPostCheck.find(filter);
     let matchingTitles;
     if (!keySearch) {
-      matchingTitles = posts.map((post) => post.post.title);
+      matchingTitles = posts.slice(0, 14).map((post) => post.post.title);
     } else {
       const searchLowerCase = removeAccents(keySearch.toLowerCase().trim());
       matchingTitles = posts
+        .slice(0, 14)
         .map((post) => post.post.title)
         .filter((title) => {
           const titleLowerCase = removeAccents(title.toLowerCase());
