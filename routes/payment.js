@@ -51,20 +51,30 @@ paymentRouter.post("/history", checkAccessToken, async (req, res) => {
     const userId = req.user.id;
     const payments = await Payment.find({ userId });
     const postIds = payments.map((payment) => payment.postId);
+
     const formPostChecks = await FormPostCheck.find({
       postId: { $in: postIds },
       hidden: false,
       censorship: true,
     }).select(
-      "post.image post.title post.dateCar post.activeButton post.numberBox post.price post.fullAddress postId userInfo post.districtValueName post.km date"
+      "post.image post.title post.dateCar post.activeButton post.numberBox post.price post.fullAddress postId userInfo post.districtValueName post.km date hidden censorship"
     );
-    const paymentsWithFormPostChecks = payments.map((payment) => {
-      const formPostCheck = formPostChecks.find((fp) => fp.postId === payment.postId);
-      return {
-        ...payment._doc,
-        formPostCheck,
-      };
-    });
+
+    const paymentsWithFormPostChecks = payments
+      .filter((payment) => {
+        const formPostCheck = formPostChecks.find((fp) => fp.postId.toString() === payment.postId.toString());
+        if (formPostCheck) {
+          return formPostCheck.hidden === false && formPostCheck.censorship === true;
+        }
+        return false;
+      })
+      .map((payment) => {
+        const formPostCheck = formPostChecks.find((fp) => fp.postId.toString() === payment.postId.toString());
+        return {
+          ...payment._doc,
+          formPostCheck,
+        };
+      });
 
     res.status(200).json({ status: "SUCCESS", payments: paymentsWithFormPostChecks });
   } catch (error) {
