@@ -450,7 +450,6 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       const [lowerPrice, upperPrice] = price.split("-").map((item) => parseInt(item));
       const match = price.match(/(min|max)(\d+)/);
 
-      // const match = dateParams[0].match(/(min|max)(\d+)/);
       console.log(match);
       if (price === "un200tr") {
         filter["post.price"] = { $lte: 200000000 };
@@ -479,27 +478,21 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       } else {
         if (!isNaN(lowerPrice) && !isNaN(upperPrice)) {
           filter["post.price"] = { $gte: lowerPrice, $lte: upperPrice };
-        } else {
-          // Xử lý nếu giá trị không hợp lệ
-        }
+        } 
       }
     }
     if (keySearch !== "undefined" && keySearch.trim() !== "") {
       const searchLowerCase = removeAccents(keySearch.toLowerCase().trim());
 
-      // Tìm kiếm các bài viết có tiêu đề chứa phần `keySearch` (không phân biệt chữ hoa chữ thường và không phân biệt dấu)
       const posts = await FormPostCheck.find(filter);
 
-      // Thay đổi thông tin userInfo của mỗi bài đăng
       const updatedPosts = await Promise.all(
         posts.map(async (post) => {
           const user = await User.findById(post.userId);
           if (user) {
-            // Nếu tìm thấy người dùng, thay đổi thông tin userInfo
             post.userInfo = {
               avatar: user.avatar,
               fullName: user.fullname,
-              // Thêm các thông tin khác nếu cần
             };
           }
           return post;
@@ -531,12 +524,8 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       return res.status(200).json({ data: paginatedPosts, status: "SUCCESS", total: totalRecords });
     } else {
       const totalRecords = await FormPostCheck.countDocuments(filter);
-      // const posts = await FormPostCheck.find(filter)
-      //   .skip((currentPage - 1) * pageSize)
-      //   .limit(pageSize);
       const posts = await FormPostCheck.find(filter);
 
-      // Thay đổi thông tin userInfo của mỗi bài đăng
       const updatedPosts = await Promise.all(
         posts.map(async (post) => {
           const user = await User.findById(post.userId);
@@ -546,8 +535,6 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
               fullName: user.fullname,
               selling: user.selling,
               selled: user.selled,
-
-              // Thêm các thông tin khác nếu cần
             };
           }
           return post;
@@ -1002,7 +989,6 @@ formPostCheckRouter.post("/key-search", async (req, res) => {
       const [lowerPrice, upperPrice] = price.split("-").map((item) => parseInt(item));
       const match = price.match(/(min|max)(\d+)/);
 
-      // const match = dateParams[0].match(/(min|max)(\d+)/);
       if (price === "un200tr") {
         filter["post.price"] = { $lte: 200000000 };
       } else if (price === "200tr-300tr") {
@@ -1030,8 +1016,6 @@ formPostCheckRouter.post("/key-search", async (req, res) => {
       } else {
         if (!isNaN(lowerPrice) && !isNaN(upperPrice)) {
           filter["post.price"] = { $gte: lowerPrice, $lte: upperPrice };
-        } else {
-          // Xử lý nếu giá trị không hợp lệ
         }
       }
     }
