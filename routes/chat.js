@@ -56,13 +56,12 @@ chatRouter.post("/post-message", checkAccessToken, async (req, res) => {
       const userPop = await User.findById(chatRoom.userReceive);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce(wss, "annouce", chatRoom.userReceive, "chat");
     } else {
       const userPop = await User.findById(chatRoom.userSend);
       userPop.announceChat = true;
       await userPop.save();
-      sendAnnouce(wss, "annouce", chatRoom.userSend, "chat");
     }
+    sendAnnouce(wss, "annouce", chatRoom.userSend, "chat");
     res.status(200).json(chatRoom);
   } catch (error) {
     res.status(500).json({ error: error.message });
