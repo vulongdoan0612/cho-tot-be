@@ -158,7 +158,7 @@ userRouter.put("/change-banner", checkAccessToken, upload.single("banner"), asyn
         if (error.code === "storage/object-not-found") {
           console.warn(`Object not found: ${fileRef.fullPath}`);
         } else {
-          throw error; 
+          throw error;
         }
       }
     };
@@ -256,7 +256,9 @@ userRouter.post("/get-announce-chat", checkAccessToken, async (req, res) => {
 userRouter.post("/get-detail-profile-user", async (req, res) => {
   try {
     const { userId } = req.body;
-    const user = await User.findById(userId).select("fullname address phone introduction rememberName selled selling sex avatar banner");
+    const user = await User.findById(userId).select(
+      "fullname address phone introduction rememberName selled selling sex avatar banner dateJoin"
+    );
     const userPosts = await FormPostCheck.find({
       userId: userId,
     }).select("post.title post.price post.slug post.image postId date userId censorship hidden dateJoin post.cityValueName");
