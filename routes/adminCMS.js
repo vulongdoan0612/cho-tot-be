@@ -148,8 +148,7 @@ adminRouter.post("/refuse-censorship", checkAccessToken, async (req, res) => {
 adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
   try {
     const { postId } = req.body;
-
-    const deletedPost = await FormPostCheck.findOneAndDelete({ postId });
+    const deletedPost = await FormPostCheck.findOneAndDelete({ postId: postId });
 
     if (!deletedPost) {
       return res.status(404).json({ message: "Post not found", status: "ERROR" });
@@ -166,7 +165,7 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
     await FavPost.updateMany({}, { $pull: { postFavList: { postId } } });
     await FormPostCheck.updateMany(
-      { userId: updatedPost.userId },
+      { userId: userPosts.userId },
       {
         $set: {
           "userInfo.selling": acceptedPostsCount,
@@ -176,7 +175,7 @@ adminRouter.delete("/delete-post", checkAccessToken, async (req, res) => {
     );
     const wss = req.wss;
 
-    webSocketMessage(wss, "delete", deletedPost.postId, updatedPost.userId);
+    webSocketMessage(wss, "delete", deletedPost.postId, userPosts.userId);
 
     res.status(200).json({ message: "Post deleted successfully", status: "SUCCESS" });
   } catch (error) {
@@ -205,16 +204,16 @@ adminRouter.post("/login-cms", async (req, res) => {
     if (!user) {
       return res.status(200).json({ message: "Tài khoản không tìm thấy.", status: "NOT_FOUND" });
     }
-    if (user)
-      if (password) {
-        const token = jwt.sign({ id: user._id }, "VinalinkGroup!2020");
-        res.status(200).json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
-      } else {
-        res.status(200).json({
-          message: "Sai mật khẩu hoặc số điện thoại.",
-          status: "UNSUCCESS",
-        });
-      }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (isPasswordValid) {
+      const token = jwt.sign({ id: user._id }, "VinalinkGroup!2020");
+      res.status(200).json({ token, message: "Đăng nhập thành công.", status: "SUCCESS" });
+    } else {
+      res.status(200).json({
+        message: "Sai mật khẩu hoặc số điện thoại.",
+        status: "UNSUCCESS",
+      });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -245,27 +244,15 @@ adminRouter.put("/change-password-cms", checkAccessToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-adminRouter.post("/register-cms", async (req, res) => {
-  const { email, password } = req.body;
+
+adminRouter.get("/get-profile-cms", checkAccessToken, async (req, res) => {
   try {
-    const existingUser = await Admin.findOne({ email });
-    if (existingUser) {
-      return res.status(201).json({
-        message: "Số điện thoại tài khoản đã tồn tại.",
-        status: "UNSUCCESS",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const admin = new Admin({ email, password: hashedPassword });
-    await admin.save();
-
-    res.status(201).json({
-      message: "Tài khoản được đăng ký thành công.",
-      status: "SUCCESS",
-    });
+    const adminId = req.user.id;
+    const admin = await Admin.findById(adminId).select("-password");
+    res.status(200).json({ admin: admin });
   } catch (error) {
-    res.status(500).json({ error: "Xin vui lòng hãy thử lại sau." });
+    console.log(error);
+    res.status(500).json({ error: error.message });
   }
 });
 export default adminRouter;
