@@ -267,15 +267,18 @@ chatRouter.post("/get-all-conversation", checkAccessToken, async (req, res) => {
         const searchLowerCase = removeAccents(search.toLowerCase().trim());
         if (fullNameLowerCase && removeAccents(fullNameLowerCase).includes(searchLowerCase)) {
           const post = posts.find((p) => p.postId === conversation.postId);
-          return {
-            ...post._doc,
-            idRoom: conversation.idRoom,
-            userReceive: userReceiveData,
-            userSend: userSendData,
-            lastText: conversation.lastText,
-            lastTextToNow: conversation.lastTextToNow,
-          };
+          if (post) {
+            return {
+              ...post._doc,
+              idRoom: conversation.idRoom,
+              userReceive: userReceiveData,
+              userSend: userSendData,
+              lastText: conversation.lastText,
+              lastTextToNow: conversation.lastTextToNow,
+            };
+          }
         }
+        return null; 
       })
     );
     const filteredUpdatedPosts = updatedPosts.filter((post) => post);
