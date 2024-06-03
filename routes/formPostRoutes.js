@@ -261,7 +261,7 @@ formPostCheckRouter.post("/get-post-check-list-accept", checkAccessToken, async 
 });
 formPostCheckRouter.get("/get-posts-current", async (req, res) => {
   try {
-    const latestPosts = await FormPostCheck.find({ censorship: true, hidden: false }).sort({ date: -1 }).limit(12);
+    const latestPosts = await FormPostCheck.find({ censorship: true, hidden: false }).sort({ $natural: -1 }).limit(12);
 
     res.status(200).json({ latestPosts });
   } catch (error) {
