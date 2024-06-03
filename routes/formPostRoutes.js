@@ -188,6 +188,8 @@ formPostCheckRouter.post("/get-post", async (req, res) => {
           postId: { $ne: postId },
           "post.wardValueName": wardValueName,
           "post.districtValueName": districtValueName,
+          censorship: true,
+          hidden: false,
         },
       },
     ]);
