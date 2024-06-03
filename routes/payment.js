@@ -57,7 +57,7 @@ paymentRouter.post("/history", checkAccessToken, async (req, res) => {
       hidden: false,
       censorship: true,
     }).select(
-      "post.image post.title post.dateCar post.activeButton post.numberBox post.price post.fullAddress postId userInfo post.districtValueName post.km date hidden censorship"
+      "post.image post.title post.dateCar post.activeButton post.numberBox post.price post.fullAddress postId userInfo post.districtValueName post.km date hidden censorship post.slug"
     );
 
     const paymentsWithFormPostChecks = payments
