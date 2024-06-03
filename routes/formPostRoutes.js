@@ -450,7 +450,6 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       const [lowerPrice, upperPrice] = price.split("-").map((item) => parseInt(item));
       const match = price.match(/(min|max)(\d+)/);
 
-      console.log(match);
       if (price === "un200tr") {
         filter["post.price"] = { $lte: 200000000 };
       } else if (price === "200tr-300tr") {
@@ -478,7 +477,7 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
       } else {
         if (!isNaN(lowerPrice) && !isNaN(upperPrice)) {
           filter["post.price"] = { $gte: lowerPrice, $lte: upperPrice };
-        } 
+        }
       }
     }
     if (keySearch !== "undefined" && keySearch.trim() !== "") {
@@ -530,6 +529,7 @@ formPostCheckRouter.post("/get-posts", async (req, res) => {
         posts.map(async (post) => {
           const user = await User.findById(post.userId);
           if (user) {
+            console.log(post.userInfo);
             post.userInfo = {
               avatar: user.avatar,
               fullName: user.fullname,
@@ -609,6 +609,12 @@ formPostCheckRouter.post("/update-post-hidden", checkAccessToken, async (req, re
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
+    await User.findByIdAndUpdate(userId, {
+      $set: {
+        selling: acceptedPostsCount,
+        selled: hiddenPostsCount,
+      },
+    });
     await Promise.all(
       userPosts.map(async (post) => {
         await post.updateOne({
@@ -803,6 +809,12 @@ formPostCheckRouter.put("/hidden-post", checkAccessToken, async (req, res) => {
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
+    await User.findByIdAndUpdate(userId, {
+      $set: {
+        selling: acceptedPostsCount,
+        selled: hiddenPostsCount,
+      },
+    });
     await Promise.all(
       userPosts.map(async (post) => {
         await post.updateOne({

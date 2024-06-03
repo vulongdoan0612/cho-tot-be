@@ -74,7 +74,12 @@ adminRouter.post("/accept-censorship", checkAccessToken, async (req, res) => {
 
     const acceptedPostsCount = userPosts.filter((post) => post.censorship === true && post.hidden === false).length;
     const hiddenPostsCount = userPosts.filter((post) => post.hidden === true && post.censorship === true).length;
-
+    await User.findByIdAndUpdate(updatedPost.userId, {
+      $set: {
+        selling: acceptedPostsCount,
+        selled: hiddenPostsCount,
+      },
+    });
     await FormPostCheck.updateMany(
       { userId: updatedPost.userId },
       {
